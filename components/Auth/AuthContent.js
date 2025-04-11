@@ -2,17 +2,16 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { authAPI } from '../../utils/api';
+import Input from '../ui/Input';
+import { colors, typography, spacing, borderRadius, globalStyles } from '../../constants/globalStyles';
 
 export default function AuthContent({ onAuthSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -93,95 +92,84 @@ export default function AuthContent({ onAuthSuccess }) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={{ uri: 'https://picsum.photos/200' }}
-            style={styles.logo}
+      style={globalStyles.container}>
+      <ScrollView contentContainerStyle={[globalStyles.scrollContent, { padding: spacing.lg }, styles.container]}>
+
+        <View >
+          <Text style={[typography.h2, globalStyles.textCenter, { marginBottom: spacing.xl }]}>
+            {isLogin ? 'Login to' : 'Sign Up for'} Tiktok
+          </Text>
+          <Text style={[typography.caption, globalStyles.textCenter, { marginBottom: spacing.xl, color: colors.gray[400] }]}>
+            {isLogin ? 'Manage your account, check notifications, comment on videos, and more.' : 'Create an account to follow creators, like videos, comment, and more.'}
+          </Text>
+          {!isLogin && (
+            <Input
+              type="text"
+              icon="person-outline"
+              placeholder="Username"
+              formData={formData.username}
+              handleInputChange={(value) => handleInputChange('username', value)}
+              isLoading={isLoading}
+            />
+          )}
+
+          <Input
+            type="email"
+            icon="mail-outline"
+            placeholder="Email"
+            formData={formData.email}
+            handleInputChange={(value) => handleInputChange('email', value)}
+            isLoading={isLoading}
           />
-          <Text style={styles.appName}>TikTok Clone</Text>
-        </View>
 
-        <View style={styles.formContainer}>
-          <Text style={styles.title}>{isLogin ? 'Welcome Back' : 'Create Account'}</Text>
-          
-          {!isLogin && (
-            <View style={styles.inputContainer}>
-              <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Username"
-                value={formData.username}
-                onChangeText={(value) => handleInputChange('username', value)}
-                autoCapitalize="none"
-                editable={!isLoading}
-              />
-            </View>
-          )}
-
-          <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              value={formData.email}
-              onChangeText={(value) => handleInputChange('email', value)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!isLoading}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              value={formData.password}
-              onChangeText={(value) => handleInputChange('password', value)}
-              secureTextEntry
-              editable={!isLoading}
-            />
-          </View>
+          <Input
+            type="password"
+            icon="lock-closed-outline"
+            placeholder="Password"
+            formData={formData.password}
+            handleInputChange={(value) => handleInputChange('password', value)}
+            isLoading={isLoading}
+          />
 
           {!isLogin && (
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm Password"
-                value={formData.confirmPassword}
-                onChangeText={(value) => handleInputChange('confirmPassword', value)}
-                secureTextEntry
-                editable={!isLoading}
-              />
-            </View>
+            <Input
+              type="password"
+              icon="lock-closed-outline"
+              placeholder="Confirm Password"
+              formData={formData.confirmPassword}
+              handleInputChange={(value) => handleInputChange('confirmPassword', value)}
+              isLoading={isLoading}
+            />
           )}
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error ? <Text style={globalStyles.textError}>{error}</Text> : null}
 
           <TouchableOpacity 
-            style={[styles.submitButton, isLoading && styles.submitButtonDisabled]} 
+            style={[
+              globalStyles.button,
+              globalStyles.buttonPrimary,
+              isLoading && globalStyles.buttonDisabled,
+              { marginTop: spacing.xl }
+            ]} 
             onPress={handleSubmit}
             disabled={isLoading}>
             {isLoading ? (
-              <ActivityIndicator color="#000" />
+              <ActivityIndicator color={colors.white} />
             ) : (
-              <Text style={styles.submitButtonText}>
+              <Text style={globalStyles.buttonText}>
                 {isLogin ? 'Login' : 'Sign Up'}
               </Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.switchButton}
+            style={[globalStyles.center, { marginTop: spacing.xl }]}
             onPress={() => {
               setIsLogin(!isLogin);
               setError('');
             }}
             disabled={isLoading}>
-            <Text style={styles.switchButtonText}>
+            <Text style={[typography.caption, { color: colors.gray[400] }]}>
               {isLogin
                 ? "Don't have an account? Sign Up"
                 : 'Already have an account? Login'}
@@ -196,81 +184,6 @@ export default function AuthContent({ onAuthSuccess }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 20,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginTop: 60,
-    marginBottom: 40,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 15,
-  },
-  appName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  formContainer: {
-    width: '100%',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 30,
-    textAlign: 'center',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 15,
-    paddingHorizontal: 15,
-    height: 50,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    height: '100%',
-    fontSize: 16,
-  },
-  errorText: {
-    color: 'red',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  submitButton: {
-    backgroundColor: '#00f2ea',
-    paddingVertical: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  submitButtonDisabled: {
-    opacity: 0.7,
-  },
-  submitButtonText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  switchButton: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  switchButtonText: {
-    color: '#00f2ea',
-    fontSize: 14,
+    justifyContent: 'center',
   },
 }); 

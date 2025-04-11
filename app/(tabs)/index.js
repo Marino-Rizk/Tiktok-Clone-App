@@ -1,40 +1,27 @@
-import { StyleSheet, View, TouchableOpacity, Text } from 'react-native'
-import React from 'react'
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import React from 'react';
+import { colors, typography, spacing, globalStyles } from '../../constants/globalStyles';
 
-const Index = () => {
-  const router = useRouter();
+const { width, height } = Dimensions.get('window');
 
+export default function Home() {
   return (
-    <View style={styles.container}>
-      <TouchableOpacity 
-        style={styles.button}
-        onPress={() => router.replace('/auth')}
-      >
-        <Text style={styles.buttonText}>Go to Auth</Text>
-      </TouchableOpacity>
+    <View style={[globalStyles.container, styles.container]}>
+      <View style={styles.videoContainer}>
+        <Text style={[typography.h2, { color: colors.white }]}>Video Feed</Text>
+      </View>
     </View>
-  )
+  );
 }
-
-export default Index
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: colors.black,
+  },
+  videoContainer: {
+    width,
+    height: height * 0.8,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  button: {
-    backgroundColor: '#FE2C55',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-})
+});

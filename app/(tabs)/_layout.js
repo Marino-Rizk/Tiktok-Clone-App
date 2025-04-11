@@ -1,15 +1,26 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing } from '../../constants/globalStyles';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.gray[400],
         tabBarStyle: {
-          backgroundColor: 'black',
+          backgroundColor: colors.white,
+          borderTopWidth: 1,
+          borderTopColor: colors.gray[200],
+          height: 70,
+          paddingBottom: 8,
+          paddingTop: 8,
         },
-        tabBarActiveTintColor: 'white',
-        tabBarInactiveTintColor: '#888',
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+        },
+        headerShown: false,
       }}>
       <Tabs.Screen
         name="index"
@@ -25,16 +36,16 @@ export default function TabLayout() {
         options={{
           title: 'Discover',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="search" size={size} color={color} />
+            <Ionicons name="compass" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="create"
         options={{
-          title: '',
-          tabBarIcon: ({ size }) => (
-            <Ionicons name="add-circle" size={size * 1.5} color="#00f2ea" />
+          title: 'Create',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="add-circle" size={size} color={color} />
           ),
         }}
       />
@@ -43,7 +54,7 @@ export default function TabLayout() {
         options={{
           title: 'Inbox',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble" size={size} color={color} />
+            <Ionicons name="chatbubble-ellipses" size={size} color={color} />
           ),
         }}
       />
