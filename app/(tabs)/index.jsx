@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList } from 'react-native';
 import React, { useState } from 'react';
 import { colors, typography, spacing, globalStyles } from '../../constants/globalStyles';
 import { hp, wp } from '../../utils/helpers';

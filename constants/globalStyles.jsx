@@ -94,6 +94,7 @@ export const globalStyles = StyleSheet.create({
     marginBottom: spacing.md,
     paddingHorizontal: spacing.md,
     height: 50,
+    width: '100%',
   },
   inputIcon: {
     marginRight: spacing.sm,
@@ -111,6 +112,7 @@ export const globalStyles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
+    width: '100%',
   },
   buttonPrimary: {
     backgroundColor: colors.primary,
