@@ -149,7 +149,6 @@ export const globalStyles = StyleSheet.create({
   textError: {
     color: colors.error,
     fontSize: typography.caption.fontSize,
-    marginBottom: spacing.sm,
   },
 
   // Modal

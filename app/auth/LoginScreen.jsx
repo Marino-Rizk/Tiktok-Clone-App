@@ -1,16 +1,44 @@
 import { useContext, useState } from "react";
-import AuthContent from "../../components/Auth/AuthContent";
+import { View, Text, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
 import { AuthContext } from "../../store/auth-context";
 import { apiCall } from "../../utils/api";
 import { useRouter } from "expo-router";
+import Input from "../../components/ui/Input";
+import { colors, typography, spacing, globalStyles } from "../../constants/globalStyles";
 
 function LoginScreen() {
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  // const authCtx = useContext(AuthContext);
+  const authCtx = useContext(AuthContext);
   const router = useRouter();
 
-  async function loginHandler(formData) {
+  const handleInputChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const validateForm = () => {
+    if (!formData.email.trim()) {
+      setError('Email is required');
+      return false;
+    }
+    if (!formData.email.includes('@')) {
+      setError('Please enter a valid email');
+      return false;
+    }
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return false;
+    }
+    return true;
+  };
+
+  async function loginHandler() {
+    setError('');
+    if (!validateForm()) return;
+    setIsLoading(true);
     setIsAuthenticating(true);
 
     console.log(formData.email + " - " + formData.password);
@@ -54,6 +82,8 @@ function LoginScreen() {
       setIsAuthenticating(false);
     }
     */
+    setIsLoading(false);
+    setIsAuthenticating(false);
   }
 
   if (isAuthenticating) {
@@ -61,10 +91,64 @@ function LoginScreen() {
   }
 
   return (
-    <AuthContent
-      type="login"
-      onSubmit={loginHandler}
-    />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
+      <View style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <View style={[{padding:spacing.lg,width:'100%'}]}>
+          <Text style={[typography.h2, globalStyles.textCenter, { marginBottom: spacing.xl }]}>Login to Tiktok</Text>
+          <Text style={[typography.caption, globalStyles.textCenter, { marginBottom: spacing.xl, color: colors.gray[400] }]}>Manage your account, check notifications, comment on videos, and more.</Text>
+          <Input
+            type="email"
+            icon="mail-outline"
+            placeholder="Email"
+            formData={formData.email}
+            handleInputChange={(value) => handleInputChange('email', value)}
+            isLoading={isLoading}
+          />
+          <Input
+            type="password"
+            icon="lock-closed-outline"
+            placeholder="Password"
+            formData={formData.password}
+            handleInputChange={(value) => handleInputChange('password', value)}
+            isLoading={isLoading}
+          />
+          {error ? <Text style={[globalStyles.textCenter,globalStyles.textError]}>{error}</Text> : null}
+          <TouchableOpacity
+            style={[
+              globalStyles.button,
+              globalStyles.buttonPrimary,
+              isLoading && globalStyles.buttonDisabled,
+              { marginTop: spacing.xl }
+            ]}
+            onPress={loginHandler}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={globalStyles.buttonText}>Login</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ marginTop: spacing.md }}
+            onPress={() => router.replace('/auth/SignupScreen')}
+            disabled={isLoading}
+          >
+            <Text style={[globalStyles.textCenter,typography.caption ,{color:colors.primary}]}>Don't have an account? Sign Up</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ marginTop: spacing.sm }}
+            onPress={() => router.replace('/auth/ForgotPassword')}
+            disabled={isLoading}
+          >
+            <Text style={[globalStyles.textCenter,typography.caption, { color: colors.primary }]}>Forgot Password?</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
