@@ -5,6 +5,7 @@ import { apiCall } from "../../utils/api";
 import { useRouter } from "expo-router";
 import Input from "../../components/ui/Input";
 import { colors, typography, spacing, globalStyles } from "../../constants/globalStyles";
+import { wp, hp, validateForm } from "../../utils/helpers";
 
 function LoginScreen() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -19,25 +20,15 @@ function LoginScreen() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const validateForm = () => {
-    if (!formData.email.trim()) {
-      setError('Email is required');
-      return false;
-    }
-    if (!formData.email.includes('@')) {
-      setError('Please enter a valid email');
-      return false;
-    }
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
-      return false;
-    }
-    return true;
+  const handleValidation = () => {
+    const error = validateForm(formData);
+    setError(error);
+    return !error;
   };
 
   async function loginHandler() {
     setError('');
-    if (!validateForm()) return;
+    if (!handleValidation()) return;
     setIsLoading(true);
     setIsAuthenticating(true);
 
@@ -96,7 +87,7 @@ function LoginScreen() {
       style={{ flex: 1 }}
     >
       <View style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <View style={[{padding:spacing.lg,width:'100%'}]}>
+        <View style={[{padding:spacing.lg,width:wp('100%')}]}>
           <Text style={[typography.h2, globalStyles.textCenter, { marginBottom: spacing.xl }]}>Login to Tiktok</Text>
           <Text style={[typography.caption, globalStyles.textCenter, { marginBottom: spacing.xl, color: colors.gray[400] }]}>Manage your account, check notifications, comment on videos, and more.</Text>
           <Input

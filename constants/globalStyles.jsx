@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { wp, hp } from '../utils/helpers';
 
 export const colors = {
   primary: '#FE2C55', // TikTok's primary color
@@ -120,6 +121,9 @@ export const globalStyles = StyleSheet.create({
   buttonSecondary: {
     backgroundColor: colors.secondary,
   },
+  buttonDisabled: {
+    backgroundColor: colors.gray[300],
+  },
   buttonText: {
     color: colors.white,
     fontSize: typography.body.fontSize,
@@ -165,4 +169,31 @@ export const globalStyles = StyleSheet.create({
     width: '90%',
     maxWidth: 400,
   },
-}); 
+
+  videoItem: {
+    width: wp(100),
+    height: hp(100),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
+
+export const pauseIconStyles = {
+  container: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'none',
+  },
+  iconBackground: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 50,
+    padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+}; 

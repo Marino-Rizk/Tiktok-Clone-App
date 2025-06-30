@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { apiCall } from "../../utils/api";
 import Input from "../../components/ui/Input";
 import { colors, typography, spacing, globalStyles } from "../../constants/globalStyles";
+import { wp, hp, validateForm } from "../../utils/helpers";
 
 function SignupScreen() {
   const [formData, setFormData] = useState({ username: '', email: '', password: '', confirmPassword: '' });
@@ -19,33 +20,15 @@ function SignupScreen() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const validateForm = () => {
-    if (!formData.username.trim()) {
-      setError('Username is required');
-      return false;
-    }
-    if (!formData.email.trim()) {
-      setError('Email is required');
-      return false;
-    }
-    if (!formData.email.includes('@')) {
-      setError('Please enter a valid email');
-      return false;
-    }
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
-      return false;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
-    return true;
+  const handleValidation = () => {
+    const error = validateForm(formData);
+    setError(error);
+    return !error;
   };
 
   async function signupHandler() {
     setError('');
-    if (!validateForm()) return;
+    if (!handleValidation()) return;
     setIsLoading(true);
     setIsAuthenticating(true);
 
@@ -102,7 +85,7 @@ function SignupScreen() {
       style={{ flex: 1 }}
     >
       <View style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <View style={{ width:'100%', padding: spacing.lg, backgroundColor: 'white' }}>
+        <View style={{ width:wp('100%'), padding: spacing.lg, backgroundColor: 'white' }}>
           <Text style={[typography.h2, globalStyles.textCenter, { marginBottom: spacing.xl }]}>Sign Up for Tiktok</Text>
           <Text style={[typography.caption, globalStyles.textCenter, { marginBottom: spacing.xl, color: colors.gray[400] }]}>Create an account to follow creators, like videos, comment, and more.</Text>
           <Input

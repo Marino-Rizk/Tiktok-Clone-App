@@ -13,4 +13,23 @@ const wp = (widthPercent) =>
 const hp = (heightPercent) =>
   PixelRatio.roundToNearestPixel((screenHeight * parsePercent(heightPercent)) / 100);
 
-export { wp, hp };
+const validateForm = (formData) => {
+  if (formData.email !== undefined && !formData.email.trim()) {
+    return 'Email is required';
+  }
+  if (formData.email !== undefined && !formData.email.includes('@')) {
+    return 'Please enter a valid email';
+  }
+  if (formData.username !== undefined && !formData.username.trim()) {
+    return 'Username is required';
+  }
+  if (formData.password !== undefined && formData.password.length < 8) {
+    return 'Password must be at least 8 characters';
+  }
+  if (formData.confirmPassword !== undefined && formData.password !== formData.confirmPassword) {
+    return 'Passwords do not match';
+  }
+  return null;
+};
+
+export { wp, hp, validateForm };

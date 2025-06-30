@@ -1,28 +1,29 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
+import React, { useState, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, globalStyles } from '../constants/globalStyles';
 import { hp, wp } from '../utils/helpers';
 import CommentModal from './CommentModal';
 
-const VideoActions = ({ 
-  likes = 0, 
-  comments = 0, 
-  shares = 0, 
+const VideoActions = ({
+  likes = 0,
+  comments = 0,
+  shares = 0,
   username = 'username',
   caption = 'Video caption goes here',
   profileImage = 'https://picsum.photos/200',
   onLike,
   onComment,
   onShare,
-  onProfilePress
+  onProfilePress,
+  isLiked
 }) => {
-  const [isLiked, setIsLiked] = useState(false);
   const [isCommentModalVisible, setIsCommentModalVisible] = useState(false);
+  const likeScale = useRef(new Animated.Value(1)).current;
 
   const handleLike = () => {
-    setIsLiked(!isLiked);
-    onLike && onLike(!isLiked);
+    
+    onLike && onLike();
   };
 
   const handleComment = () => {
@@ -30,60 +31,57 @@ const VideoActions = ({
     onComment && onComment();
   };
 
-  const ActionButton = ({ icon, count, onPress }) => (
+  const ActionButton = ({ icon, count, onPress, isLiked = false, animated = false }) => (
     <TouchableOpacity style={styles.actionButton} onPress={onPress}>
-      <Ionicons 
-        name={icon} 
-        size={38} 
-        color={colors.white} 
-      />
-      <Text style={styles.actionCount}>{count}</Text>
+      <Animated.View style={animated ? { transform: [{ scale: likeScale }] } : {}}>
+        <Ionicons
+          name={icon}
+          size={38}
+          color={isLiked ? colors.primary : colors.white}
+        />
+      </Animated.View>
+      <Text style={styles.actionCount}>{count} </Text>
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
       <View style={styles.rightActions}>
-        <TouchableOpacity 
-          style={styles.profileButton} 
+        <TouchableOpacity
+          style={styles.profileButton}
           onPress={onProfilePress}
         >
-          <Image 
-            source={{ uri: profileImage }} 
-            style={styles.profileImage} 
+          <Image
+            source={{ uri: profileImage }}
+            style={styles.profileImage}
           />
           <View style={styles.followButton}>
             <Ionicons name="add" size={16} color={colors.white} />
           </View>
         </TouchableOpacity>
 
-        <ActionButton 
-          icon={isLiked ? "heart" : "heart-outline"} 
-          count={likes} 
-          onPress={handleLike} 
+        <ActionButton
+          icon={isLiked ? "heart" : "heart-outline"}
+          count={likes}
+          onPress={handleLike}
+          isLiked={isLiked}
+          animated={true}
         />
-        <ActionButton 
-          icon="chatbubble-outline" 
-          count={comments} 
-          onPress={handleComment} 
+        <ActionButton
+          icon="chatbubble-outline"
+          count={comments}
+          onPress={handleComment}
         />
-        <ActionButton 
-          icon="arrow-redo-outline" 
-          count={shares} 
-          onPress={onShare} 
+        <ActionButton
+          icon="arrow-redo-outline"
+          count={shares}
+          onPress={onShare}
         />
-        <View style={styles.musicButton}>
-          <Ionicons name="musical-notes" size={24} color={colors.white} />
-        </View>
       </View>
 
       <View style={styles.captionContainer}>
         <Text style={styles.username}>@{username}</Text>
         <Text style={styles.caption}>{caption}</Text>
-        <View style={styles.musicContainer}>
-          <Ionicons name="musical-notes" size={16} color={colors.white} />
-          <Text style={styles.musicText}>Original sound - {username}</Text>
-        </View>
       </View>
 
       <CommentModal
@@ -113,7 +111,7 @@ const VideoActions = ({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: hp(5),
+    bottom: hp(2),
     left: 0,
     right: 0,
     paddingHorizontal: spacing.lg,
@@ -121,7 +119,7 @@ const styles = StyleSheet.create({
   rightActions: {
     position: 'absolute',
     right: spacing.lg,
-    bottom: hp(0),
+    bottom: 0,
     alignItems: 'center',
   },
   actionButton: {
@@ -139,23 +137,17 @@ const styles = StyleSheet.create({
   },
   profileImage: {
     width: wp(12),
-    height: wp(12),
-    borderRadius: wp(6),
+    aspectRatio:1,
+    borderRadius: wp(100),
     borderWidth: 2,
     borderColor: colors.white,
   },
   followButton: {
     position: 'absolute',
-    bottom: -8,
+    bottom: -12,
     backgroundColor: colors.primary,
-    borderRadius: wp(3),
+    borderRadius: wp(100),
     padding: spacing.xs,
-  },
-  musicButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: wp(6),
-    padding: spacing.sm,
-    transform: [{ rotate: '45deg' }],
   },
   captionContainer: {
     maxWidth: wp(70),
@@ -171,15 +163,7 @@ const styles = StyleSheet.create({
     fontSize: typography.body.fontSize,
     marginBottom: spacing.sm,
   },
-  musicContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  musicText: {
-    color: colors.white,
-    fontSize: typography.caption.fontSize,
-    marginLeft: spacing.xs,
-  },
+
 });
 
-export default VideoActions; 
+export default VideoActions;
