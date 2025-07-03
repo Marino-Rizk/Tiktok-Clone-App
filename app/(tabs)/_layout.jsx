@@ -1,18 +1,19 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing } from '../../constants/globalStyles';
+import { hp } from '../../utils/helpers';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.gray[400],
+        tabBarInactiveTintColor: colors.gray[100],
         tabBarStyle: {
-          backgroundColor: colors.white,
-          borderTopWidth: 1,
-          borderTopColor: colors.gray[200],
-          height: 70,
+          backgroundColor: colors.black,
+          borderTopWidth: 0,
+          borderTopColor: colors.black,
+          height: hp(8),
           paddingBottom: 8,
           paddingTop: 8,
         },
