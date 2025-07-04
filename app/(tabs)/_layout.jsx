@@ -33,7 +33,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="discover"
+        name="Discover"
         options={{
           title: 'Discover',
           tabBarIcon: ({ color, size }) => (
@@ -42,7 +42,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="create"
+        name="Create"
         options={{
           title: 'Create',
           tabBarIcon: ({ color, size }) => (
@@ -51,7 +51,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="inbox"
+        name="Inbox"
         options={{
           title: 'Inbox',
           tabBarIcon: ({ color, size }) => (
@@ -60,12 +60,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="Profile"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="VideoViewer"
+        options={{
+          href: null, // This hides it from the tab bar
+          title: 'Video Viewer',
         }}
       />
     </Tabs>

@@ -154,7 +154,6 @@ export default function Home() {
     </GestureHandlerRootView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.black,
@@ -172,3 +171,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+

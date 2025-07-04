@@ -41,4 +41,22 @@ export function timeAgo(timestamp) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+export function formatFollowers(num) {
+  if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return num.toString();
+}
+
+export function formatLikes(num) {
+  if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return num.toString();
+}
+
+export function formatViews(num) {
+  if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return num.toString();
+}
+
 export { wp, hp, validateForm };
