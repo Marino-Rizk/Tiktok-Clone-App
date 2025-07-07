@@ -4,10 +4,12 @@ import { colors, typography, spacing, globalStyles } from '../../constants/globa
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { wp, hp } from '../../utils/helpers';
+import { formatFollowers, formatLikes, formatViews } from '../../utils/helpers';
 
 // Mock profile fetcher response
 const mockProfile = {
   user_id: 12345,
+  is_owner: true,
   username: 'cool_creator',
   display_name: 'Cool Creator',
   profile_picture_url: 'https://picsum.photos/200/200',
@@ -77,8 +79,8 @@ export default function Profile() {
   };
 
   const handleStatPress = (type) => {
-    // Optionally navigate to followers/following/likes lists
-    console.log(`Navigate to ${type} list`);
+    // Navigate to followers/following/likes lists
+    navigation.navigate('FollowersPage', { initialTab: type, userId: user.user_id });
   };
 
   const handleVideoPress = (video) => {
@@ -144,9 +146,7 @@ export default function Profile() {
             <Text style={[typography.h3, { color: textColor }]}>
               {user.following_count}
             </Text>
-            <Text style={[typography.caption, { color: secondaryText }]}>
-              Following
-            </Text>
+            <Text style={[typography.caption, { color: secondaryText }]}>Following </Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -156,9 +156,7 @@ export default function Profile() {
             <Text style={[typography.h3, { color: textColor }]}>
               {formatFollowers(user.follower_count)}
             </Text>
-            <Text style={[typography.caption, { color: secondaryText }]}>
-              Followers
-            </Text>
+            <Text style={[typography.caption, { color: secondaryText }]}>Followers </Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -168,30 +166,25 @@ export default function Profile() {
             <Text style={[typography.h3, { color: textColor }]}>
               {formatLikes(user.likes_count)}
             </Text>
-            <Text style={[typography.caption, { color: secondaryText }]}>
-              Likes
-            </Text>
+            <Text style={[typography.caption, { color: secondaryText }]}>Likes </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Action Row */}
         <View style={styles.actionRow}>
-          {user.is_following ? (
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: colors.gray[300] }]} 
-              onPress={handleEditProfile}
-            >
-              <Text style={[typography.body, { color: textColor, fontWeight: '600' }]}>
-                Edit Profile
-              </Text>
-            </TouchableOpacity>
-          ) : (
+          {user.is_owner ? (
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: colors.primary }]} 
+              onPress={handleEditProfile}
+            >
+              <Text style={[typography.body, { color: colors.white, fontWeight: '600' }]}>Edit Profile</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: user.is_following ? colors.gray[400] : colors.primary }]}
               onPress={handleFollow}
             >
-              <Text style={[typography.body, { color: colors.white, fontWeight: '600' }]}>
-                Follow
+              <Text style={[typography.body, { color: user.is_following ? textColor : colors.white, fontWeight: '600' }]}> 
+                {user.is_following ? 'Unfollow' : 'Follow'}
               </Text>
             </TouchableOpacity>
           )}
@@ -235,25 +228,6 @@ export default function Profile() {
       </ScrollView>
     </View>
   );
-}
-
-// Helper functions
-function formatFollowers(num) {
-  if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-  if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-  return num.toString();
-}
-
-function formatLikes(num) {
-  if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-  if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-  return num.toString();
-}
-
-function formatViews(num) {
-  if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-  if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-  return num.toString();
 }
 
 const styles = StyleSheet.create({

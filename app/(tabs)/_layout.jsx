@@ -75,6 +75,20 @@ export default function TabLayout() {
           title: 'Video Viewer',
         }}
       />
+      <Tabs.Screen
+        name="FollowersPage"
+        options={{
+          href: null, // Hide from tab bar
+          title: 'Followers',
+        }}
+      />
+      <Tabs.Screen
+        name="EditProfile"
+        options={{
+          href: null, // Hide from tab bar
+          title: 'Edit Profile',
+        }}
+      />
     </Tabs>
   );
 } 
