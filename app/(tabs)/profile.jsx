@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, Image, useColorScheme, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, FlatList } from 'react-native';
 import React from 'react';
-import { colors, typography, spacing, globalStyles } from '../../constants/globalStyles';
+import { theme, typography, spacing, globalStyles } from '../../constants/globalStyles';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { wp, hp } from '../../utils/helpers';
 import { formatFollowers, formatLikes, formatViews } from '../../utils/helpers';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Mock profile fetcher response
 const mockProfile = {
@@ -53,11 +54,6 @@ const mockProfile = {
 };
 
 export default function Profile() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const backgroundColor = isDark ? colors.black : colors.white;
-  const textColor = isDark ? colors.white : colors.black;
-  const secondaryText = isDark ? colors.gray[300] : colors.gray[400];
   const navigation = useNavigation();
 
   // Calculate thumbnail size
@@ -94,21 +90,14 @@ export default function Profile() {
 
   const renderVideoItem = ({ item, index }) => (
     <TouchableOpacity
-      style={[styles.videoThumbnail, { 
-        width: thumbnailSize, 
-        height: thumbnailSize * 1.5 // Make it more vertical like TikTok
-      }]}
+      style={[styles.videoThumbnail, { width: thumbnailSize, height: thumbnailSize * 1.5 }]}
       onPress={() => handleVideoPress(item)}
       activeOpacity={0.85}
     >
-      <Image 
-        source={{ uri: item.thumbnail_url }} 
-        style={styles.thumbnailImage}
-        resizeMode="cover"
-      />
+      <Image source={{ uri: item.thumbnail_url }} style={styles.thumbnailImage} resizeMode="cover" />
       <View style={styles.videoOverlay}>
         <View style={styles.playButton}>
-          <Ionicons name="play" size={14} color={colors.white} />
+          <Ionicons name="play" size={14} color={theme.text} />
         </View>
         <Text style={styles.videoViews}>{formatViews(item.view_count)}</Text>
       </View>
@@ -116,117 +105,56 @@ export default function Profile() {
   );
 
   return (
-    <View style={[globalStyles.container, styles.container, { backgroundColor }]}> 
-      <ScrollView 
-        contentContainerStyle={{ paddingBottom: 32 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header Section */}
+    <SafeAreaView style={[globalStyles.container, styles.container, { backgroundColor: theme.background }]} edges={["top","bottom","left","right"]}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
         <View style={styles.headerSection}>
-          <Image 
-            source={{ uri: user.profile_picture_url }} 
-            style={styles.avatar} 
-          />
-          <Text style={[typography.h2, { color: textColor, marginTop: spacing.md }]}>
-            @{user.username}
-          </Text>
+          <Image source={{ uri: user.profile_picture_url }} style={styles.avatar} />
+          <Text style={[typography.h2, { color: theme.text, marginTop: spacing.md }]}>@{user.username}</Text>
           {user.display_name && (
-            <Text style={[typography.h3, { color: secondaryText, marginTop: 2 }]}>
-              {user.display_name}
-            </Text>
+            <Text style={[typography.h3, { color: theme.subtext, marginTop: 2 }]}>{user.display_name}</Text>
           )}
         </View>
-
-        {/* Stats Row */}
         <View style={styles.statsRow}>
-          <TouchableOpacity 
-            style={styles.statItem} 
-            onPress={() => handleStatPress('following')}
-          >
-            <Text style={[typography.h3, { color: textColor }]}>
-              {user.following_count}
-            </Text>
-            <Text style={[typography.caption, { color: secondaryText }]}>Following </Text>
+          <TouchableOpacity style={styles.statItem} onPress={() => handleStatPress('following')}>
+            <Text style={[typography.h3, { color: theme.text }]}>{user.following_count}</Text>
+            <Text style={[typography.caption, { color: theme.subtext }]}>Following </Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.statItem} 
-            onPress={() => handleStatPress('followers')}
-          >
-            <Text style={[typography.h3, { color: textColor }]}>
-              {formatFollowers(user.follower_count)}
-            </Text>
-            <Text style={[typography.caption, { color: secondaryText }]}>Followers </Text>
+          <TouchableOpacity style={styles.statItem} onPress={() => handleStatPress('followers')}>
+            <Text style={[typography.h3, { color: theme.text }]}>{formatFollowers(user.follower_count)}</Text>
+            <Text style={[typography.caption, { color: theme.subtext }]}>Followers </Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.statItem} 
-            onPress={() => handleStatPress('likes')}
-          >
-            <Text style={[typography.h3, { color: textColor }]}>
-              {formatLikes(user.likes_count)}
-            </Text>
-            <Text style={[typography.caption, { color: secondaryText }]}>Likes </Text>
+          <TouchableOpacity style={styles.statItem} onPress={() => handleStatPress('likes')}>
+            <Text style={[typography.h3, { color: theme.text }]}>{formatLikes(user.likes_count)}</Text>
+            <Text style={[typography.caption, { color: theme.subtext }]}>Likes </Text>
           </TouchableOpacity>
         </View>
-
         <View style={styles.actionRow}>
           {user.is_owner ? (
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: colors.primary }]} 
-              onPress={handleEditProfile}
-            >
-              <Text style={[typography.body, { color: colors.white, fontWeight: '600' }]}>Edit Profile</Text>
+            <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.primary }]} onPress={handleEditProfile}>
+              <Text style={[typography.body, { color: theme.text, fontWeight: '600' }]}>Edit Profile</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: user.is_following ? colors.gray[400] : colors.primary }]}
-              onPress={handleFollow}
-            >
-              <Text style={[typography.body, { color: user.is_following ? textColor : colors.white, fontWeight: '600' }]}> 
-                {user.is_following ? 'Unfollow' : 'Follow'}
-              </Text>
+            <TouchableOpacity style={[styles.actionButton, { backgroundColor: user.is_following ? theme.subtext : theme.primary }]} onPress={handleFollow}>
+              <Text style={[typography.body, { color: theme.text, fontWeight: '600' }]}>{user.is_following ? 'Unfollow' : 'Follow'}</Text>
             </TouchableOpacity>
           )}
         </View>
-
-        {/* Videos Section */}
         <View style={styles.videosSection}>
           <View style={styles.sectionHeader}>
-            <Text style={[typography.h3, { color: textColor }]}>
-              Videos
-            </Text>
-            <Text style={[typography.caption, { color: secondaryText }]}>
-              {videos.length} videos
-            </Text>
+            <Text style={[typography.h3, { color: theme.text }]}>Videos</Text>
+            <Text style={[typography.caption, { color: theme.subtext }]}>{videos.length} videos</Text>
           </View>
-          
-          {videos.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons 
-                name="camera" 
-                size={64} 
-                color={secondaryText} 
-                style={{ marginBottom: 16 }} 
-              />
-              <Text style={[typography.body, { color: secondaryText, textAlign: 'center' }]}>
-                Upload your first video!
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={videos}
-              renderItem={renderVideoItem}
-              keyExtractor={(item) => item.id}
-              numColumns={numColumns}
-              scrollEnabled={false}
-              contentContainerStyle={styles.videosGrid}
-              columnWrapperStyle={styles.videoRow}
-            />
-          )}
+          <FlatList
+            data={videos}
+            renderItem={renderVideoItem}
+            keyExtractor={item => item.id}
+            numColumns={numColumns}
+            scrollEnabled={false}
+            contentContainerStyle={{ paddingTop: 8 }}
+          />
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -245,7 +173,7 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 48,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: theme.primary,
   },
   statsRow: {
     flexDirection: 'row',
@@ -294,7 +222,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: colors.gray[200],
+    backgroundColor: theme.card,
   },
   thumbnailImage: {
     width: '100%',
@@ -317,7 +245,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   videoViews: {
-    color: colors.white,
+    color: theme.text,
     fontSize: 12,
     fontWeight: '600',
     backgroundColor: 'rgba(0,0,0,0.6)',

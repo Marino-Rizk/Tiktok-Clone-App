@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, FlatList, useColorScheme, Dimensions } from 'react-native';
-import { colors, typography, spacing } from '../../constants/globalStyles';
+import { View, Text, StyleSheet, Image, TouchableOpacity, FlatList, Dimensions } from 'react-native';
+import { theme, typography, spacing } from '../../constants/globalStyles';
 import { Ionicons } from '@expo/vector-icons';
 import { wp } from '../../utils/helpers';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const mockUsers = [
   {
@@ -32,12 +33,6 @@ const TABS = [
 ];
 
 export default function FollowersPage({ route }) {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const backgroundColor = isDark ? colors.black : colors.white;
-  const textColor = isDark ? colors.white : colors.black;
-  const secondaryText = isDark ? colors.gray[300] : colors.gray[400];
-
   const initialTab = route?.params?.initialTab || 'followers';
   const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -53,22 +48,20 @@ export default function FollowersPage({ route }) {
   const renderUserItem = ({ item }) => (
     <View style={styles.userItem}>
       <Image source={{ uri: item.profile_picture_url }} style={styles.avatar} />
-      <Text style={[typography.body, { color: textColor, flex: 1, marginLeft: 12 }]}>{item.username}</Text>
+      <Text style={[typography.body, { color: theme.text, flex: 1, marginLeft: 12 }]}>{item.username}</Text>
       {(activeTab === 'followers' || activeTab === 'following') && (
         <TouchableOpacity
-          style={[styles.followBtn, { backgroundColor: item.is_following ? colors.gray[400] : colors.primary }]}
+          style={[styles.followBtn, { backgroundColor: item.is_following ? theme.subtext : theme.primary }]}
           onPress={() => handleFollowToggle(item.id)}
         >
-          <Text style={{ color: item.is_following ? textColor : colors.white, fontWeight: '600' }}>
-            {item.is_following ? 'Unfollow' : 'Follow'}
-          </Text>
+          <Text style={{ color: theme.text, fontWeight: '600' }}>{item.is_following ? 'Unfollow' : 'Follow'}</Text>
         </TouchableOpacity>
       )}
     </View>
   );
 
   return (
-    <View style={[styles.container, { backgroundColor }]}> 
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={["top","bottom","left","right"]}>
       {/* Tab Bar */}
       <View style={styles.tabBar}>
         {TABS.map(tab => (
@@ -77,9 +70,7 @@ export default function FollowersPage({ route }) {
             style={[styles.tabBtn, activeTab === tab.key && styles.activeTabBtn]}
             onPress={() => setActiveTab(tab.key)}
           >
-            <Text style={[styles.tabLabel, { color: activeTab === tab.key ? colors.primary : secondaryText }]}> 
-              {tab.label}
-            </Text>
+            <Text style={[styles.tabLabel, { color: activeTab === tab.key ? theme.primary : theme.subtext }]}>{tab.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -89,9 +80,9 @@ export default function FollowersPage({ route }) {
         renderItem={renderUserItem}
         keyExtractor={item => item.id}
         contentContainerStyle={{ padding: 16 }}
-        ListEmptyComponent={<Text style={{ color: secondaryText, textAlign: 'center', marginTop: 32 }}>No users found.</Text>}
+        ListEmptyComponent={<Text style={{ color: theme.subtext, textAlign: 'center', marginTop: 32 }}>No users found.</Text>}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -103,7 +94,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
+    borderBottomColor: theme.border,
     backgroundColor: 'transparent',
     paddingTop: spacing.lg,
   },
@@ -114,7 +105,7 @@ const styles = StyleSheet.create({
   },
   activeTabBtn: {
     borderBottomWidth: 2,
-    borderBottomColor: colors.primary,
+    borderBottomColor: theme.primary,
   },
   tabLabel: {
     fontSize: 16,
@@ -125,13 +116,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray[100],
+    borderBottomColor: theme.border,
   },
   avatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.gray[200],
+    backgroundColor: theme.card,
   },
   followBtn: {
     borderRadius: 8,

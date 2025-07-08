@@ -17,7 +17,37 @@ export const colors = {
   warning: '#FFB800',
   error: '#FF2C55',
   overlay: 'rgba(0, 0, 0, 0.5)',
+  // Add dark theme palette
+  dark: {
+    background: '#181818',
+    card: '#232323',
+    text: '#FFFFFF',
+    subtext: '#B0B0B0',
+    border: '#333333',
+    inputBg: '#232323',
+    inputBorder: '#333333',
+    primary: '#FE2C55',
+    secondary: '#25F4EE',
+    error: '#FF2C55',
+    overlay: 'rgba(0,0,0,0.5)',
+  },
+  light: {
+    background: '#FFFFFF',
+    card: '#F8F8F8',
+    text: '#000000',
+    subtext: '#8B8B8B',
+    border: '#E3E3E4',
+    inputBg: '#FFFFFF',
+    inputBorder: '#E3E3E4',
+    primary: '#FE2C55',
+    secondary: '#25F4EE',
+    error: '#FF2C55',
+    overlay: 'rgba(0,0,0,0.05)',
+  },
 };
+
+// Set the global theme here ("dark" or "light")
+export const theme = colors.dark;
 
 export const typography = {
   h1: {
@@ -71,7 +101,7 @@ export const globalStyles = StyleSheet.create({
   // Layout
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: theme.background,
   },
   row: {
     flexDirection: 'row',
@@ -90,12 +120,13 @@ export const globalStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.gray[300],
+    borderColor: theme.inputBorder,
     borderRadius: borderRadius.sm,
     marginBottom: spacing.md,
     paddingHorizontal: spacing.md,
     height: 50,
     width: '100%',
+    backgroundColor: theme.inputBg,
   },
   inputIcon: {
     marginRight: spacing.sm,
@@ -104,6 +135,8 @@ export const globalStyles = StyleSheet.create({
     flex: 1,
     height: '100%',
     fontSize: typography.body.fontSize,
+    color: theme.text,
+    backgroundColor: theme.inputBg,
   },
 
   // Button
@@ -116,27 +149,27 @@ export const globalStyles = StyleSheet.create({
     width: '100%',
   },
   buttonPrimary: {
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
   },
   buttonSecondary: {
-    backgroundColor: colors.secondary,
+    backgroundColor: theme.secondary,
   },
   buttonDisabled: {
-    backgroundColor: colors.gray[300],
+    backgroundColor: theme.subtext,
   },
   buttonText: {
-    color: colors.white,
+    color: theme.text,
     fontSize: typography.body.fontSize,
     fontWeight: '600',
   },
 
   // Card
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: theme.card,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
-    shadowColor: colors.black,
+    shadowColor: theme.border,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -151,19 +184,19 @@ export const globalStyles = StyleSheet.create({
     textAlign: 'center',
   },
   textError: {
-    color: colors.error,
+    color: theme.error,
     fontSize: typography.caption.fontSize,
   },
 
   // Modal
   modalContainer: {
     flex: 1,
-    backgroundColor: colors.overlay,
+    backgroundColor: theme.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: colors.white,
+    backgroundColor: theme.card,
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
     width: '90%',

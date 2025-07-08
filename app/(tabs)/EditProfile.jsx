@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, useColorScheme, Alert } from 'react-native';
-import { colors, typography, spacing } from '../../constants/globalStyles';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
+import { theme, typography, spacing } from '../../constants/globalStyles';
 import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const mockProfile = {
   display_name: 'Cool Creator',
@@ -10,19 +11,12 @@ const mockProfile = {
 };
 
 export default function EditProfile() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const backgroundColor = isDark ? colors.black : colors.white;
-  const textColor = isDark ? colors.white : colors.black;
-  const secondaryText = isDark ? colors.gray[300] : colors.gray[400];
   const navigation = useNavigation();
-
   const [displayName, setDisplayName] = useState(mockProfile.display_name);
   const [username, setUsername] = useState(mockProfile.username);
   const [profilePic, setProfilePic] = useState(mockProfile.profile_picture_url);
 
   const handleSave = () => {
-    // Implement save logic (API call)
     Alert.alert('Profile Updated', 'Your profile has been updated.');
     navigation.goBack();
   };
@@ -32,34 +26,31 @@ export default function EditProfile() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor }]}> 
-      <Text style={[typography.h2, { color: textColor, marginBottom: spacing.lg }]}>Edit Profile</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={["top","bottom","left","right"]}>
+      <Text style={[typography.h2, { color: theme.text, marginBottom: spacing.lg }]}>Edit Profile</Text>
       <View style={styles.avatarSection}>
         <Image source={{ uri: profilePic }} style={styles.avatar} />
-        <TouchableOpacity
-          style={[styles.uploadBtn, { backgroundColor: colors.primary }]}
-          onPress={() => setProfilePic(`https://picsum.photos/200/200?random=${Math.floor(Math.random()*1000)}`)}
-        >
-          <Text style={{ color: colors.white, fontWeight: '600' }}>Upload Image</Text>
+        <TouchableOpacity style={[styles.uploadBtn, { backgroundColor: theme.primary }]} onPress={() => setProfilePic(`https://picsum.photos/200/200?random=${Math.floor(Math.random()*1000)}`)}>
+          <Text style={{ color: theme.text, fontWeight: '600' }}>Upload Image</Text>
         </TouchableOpacity>
       </View>
-      <Text style={[typography.label, { color: secondaryText }]}>Display Name</Text>
+      <Text style={[{ color: theme.subtext, marginBottom: 4 }]}>Display Name</Text>
       <TextInput
-        style={[styles.input, { color: textColor, borderColor: secondaryText }]}
+        style={[styles.input, { color: theme.text, borderColor: theme.subtext }]}
         value={displayName}
         onChangeText={setDisplayName}
         placeholder="Display Name"
-        placeholderTextColor={secondaryText}
+        placeholderTextColor={theme.subtext}
       />
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={[styles.button, { backgroundColor: colors.gray[400] }]} onPress={handleCancel}>
-          <Text style={[typography.body, { color: textColor, fontWeight: '600' }]}>Cancel</Text>
+        <TouchableOpacity style={[styles.button, { backgroundColor: theme.subtext }]} onPress={handleCancel}>
+          <Text style={[{ color: theme.text, fontWeight: '600' }]}>Cancel</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, { backgroundColor: colors.primary }]} onPress={handleSave}>
-          <Text style={[typography.body, { color: colors.white, fontWeight: '600' }]}>Save</Text>
+        <TouchableOpacity style={[styles.button, { backgroundColor: theme.primary }]} onPress={handleSave}>
+          <Text style={[{ color: theme.text, fontWeight: '600' }]}>Save</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -77,7 +68,7 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 48,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: theme.primary,
     marginBottom: spacing.md,
   },
   input: {

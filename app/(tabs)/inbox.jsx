@@ -1,8 +1,9 @@
-import { View, Text, StyleSheet, FlatList, RefreshControl, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import React, { useState, useCallback } from 'react';
-import { colors, typography, spacing, globalStyles } from '../../constants/globalStyles';
+import { theme, typography, spacing, globalStyles } from '../../constants/globalStyles';
 import { useNavigation } from '@react-navigation/native';
 import NotificationItem from '../../components/NotificationItem';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Mock notifications data
 const mockNotifications = [
@@ -68,12 +69,6 @@ export default function Inbox() {
   const [notifications, setNotifications] = useState(mockNotifications);
   const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation();
-  const colorScheme = useColorScheme();
-
-  const isDark = colorScheme === 'dark';
-  const backgroundColor = isDark ? colors.black : colors.white;
-  const textColor = isDark ? colors.white : colors.black;
-  const secondaryText = isDark ? colors.gray[300] : colors.gray[500];
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -99,19 +94,19 @@ export default function Inbox() {
     <NotificationItem
       notification={item}
       onPress={() => handleNotificationPress(item)}
-      isDark={isDark}
+      isDark={true}
     />
   );
 
   return (
-    <View style={[globalStyles.container, styles.container, { backgroundColor }]}>
+    <SafeAreaView style={[globalStyles.container, styles.container, { backgroundColor: theme.background }]} edges={["top","bottom","left","right"]}>
       <View style={styles.headerContainer}>
-        <Text style={[typography.h2, { color: textColor }]}>Activity</Text>
+        <Text style={[typography.h2, { color: theme.text }]}>Activity</Text>
       </View>
       {notifications.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={{ fontSize: 48, marginBottom: 16 }}>🔔</Text>
-          <Text style={[typography.body, { color: secondaryText, textAlign: 'center' }]}>No activity yet. Interactions will appear here!</Text>
+          <Text style={[typography.body, { color: theme.subtext, textAlign: 'center' }]}>No activity yet. Interactions will appear here!</Text>
         </View>
       ) : (
         <FlatList
@@ -122,7 +117,7 @@ export default function Inbox() {
           contentContainerStyle={{ paddingBottom: 32 }}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
