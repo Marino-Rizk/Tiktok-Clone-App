@@ -33,7 +33,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="Discover"
+        name="discover"
         options={{
           title: 'Discover',
           tabBarIcon: ({ color, size }) => (
@@ -42,7 +42,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="Create"
+        name="create"
         options={{
           title: 'Create',
           tabBarIcon: ({ color, size }) => (
@@ -51,7 +51,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="Inbox"
+        name="inbox"
         options={{
           title: 'Inbox',
           tabBarIcon: ({ color, size }) => (
@@ -60,7 +60,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="Profile"
+        name="profile"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (

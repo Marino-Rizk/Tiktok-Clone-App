@@ -6,7 +6,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import Input from "../../components/ui/Input";
 import { colors, typography, spacing, globalStyles } from "../../constants/globalStyles";
 import { Ionicons } from '@expo/vector-icons';
-//import {apiCall } from "../../utils/api"; 
+
+const dark = colors.dark;
 
 const OtpScreen = () => {
   const authCtx = useContext(AuthContext);
@@ -39,28 +40,6 @@ const OtpScreen = () => {
     setError('');
     if (!validateForm()) return;
     setIsAuthenticating(true);
-
-    /*
-    try {
-      // Call the backend to verify the OTP
-      const res = await apiCall("post", "/auth/verify-otp", {
-        email: email,
-        otp: otp,
-      });
-      if (res.success) {
-        // Authenticate user with received token(s)
-        // authCtx.authenticate(res.data.accessToken, res.data.refreshToken, res.data.user);
-        router.replace("/(tabs)");
-      } else {
-        // Handle error (e.g., show alert)
-        // Alert.alert("Invalid OTP", res.data.errorMessage || "The code you entered is incorrect.");
-      }
-    } catch (error) {
-      // Alert.alert("Verification Failed", "Something went wrong. Try again.");
-    } finally {
-      setIsAuthenticating(false);
-    }
-    */
     if (otp === mockOTP) {
       console.log("OTP Verified:", otp);
       router.replace("/(tabs)");
@@ -74,14 +53,6 @@ const OtpScreen = () => {
     if (resendTimer > 0) return;
     setResendTimer(30);
     console.log("Resending OTP to", email);
-    /*
-    try {
-      await apiCall("post", "/auth/send-otp", { email });
-      setResendTimer(30);
-    } catch (error) {
-      // Alert.alert("Error", "Could not resend OTP. Please try again.");
-    }
-    */
   };
 
   return (
@@ -89,16 +60,16 @@ const OtpScreen = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1 }}
     >
-      <View style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center', width: '100%', padding: spacing.lg }]}>
+      <View style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center', width: '100%', padding: spacing.lg, backgroundColor: dark.background }]}> 
         <TouchableOpacity
           style={{ alignSelf: 'flex-start', marginBottom: spacing.lg, padding: 8 }}
           onPress={() => router.replace('/auth/SignupScreen')}
           disabled={isAuthenticating}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.primary} />
+          <Ionicons name="arrow-back" size={24} color={dark.primary} />
         </TouchableOpacity>
-        <Text style={[typography.h2, globalStyles.textCenter, { marginBottom: spacing.xl }]}>Enter OTP</Text>
-        <Text style={[typography.caption, globalStyles.textCenter, { marginBottom: spacing.xl, color: colors.gray[400] }]}>Enter the 6-digit code sent to your email.</Text>
+        <Text style={[typography.h2, globalStyles.textCenter, { marginBottom: spacing.xl, color: dark.text }]}>Enter OTP</Text>
+        <Text style={[typography.caption, globalStyles.textCenter, { marginBottom: spacing.xl, color: dark.subtext }]}>Enter the 6-digit code sent to your email.</Text>
         <Input
           type="otp"
           icon="key-outline"
@@ -111,7 +82,7 @@ const OtpScreen = () => {
         <TouchableOpacity
           style={[
             globalStyles.button,
-            globalStyles.buttonPrimary,
+            { backgroundColor: dark.primary },
             isAuthenticating && globalStyles.buttonDisabled,
             { marginTop: spacing.xl }
           ]}
@@ -119,9 +90,9 @@ const OtpScreen = () => {
           disabled={isAuthenticating}
         >
           {isAuthenticating ? (
-            <ActivityIndicator color={colors.white} />
+            <ActivityIndicator color={dark.text} />
           ) : (
-            <Text style={globalStyles.buttonText}>Verify OTP</Text>
+            <Text style={[globalStyles.buttonText, {color: dark.text}]}>Verify OTP</Text>
           )}
         </TouchableOpacity>
         <TouchableOpacity
@@ -129,7 +100,7 @@ const OtpScreen = () => {
           onPress={resendOtp}
           disabled={resendTimer > 0 || isAuthenticating}
         >
-          <Text style={[typography.caption, { color: resendTimer > 0 ? colors.gray[400] : colors.primary }]}>
+          <Text style={[typography.caption, { color: resendTimer > 0 ? dark.subtext : dark.primary }]}>
             {resendTimer > 0 ? `Resend OTP in ${resendTimer}s  ` : 'Resend OTP  '}
           </Text>
         </TouchableOpacity>

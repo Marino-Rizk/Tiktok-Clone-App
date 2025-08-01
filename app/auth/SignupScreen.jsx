@@ -1,14 +1,16 @@
 import { useContext, useState } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { AuthContext } from "../../store/auth-context";
 import { useRouter } from "expo-router";
-import { apiCall } from "../../utils/api";
+import { registerUser, validateRegistrationData } from "../../utils/authService";
 import Input from "../../components/ui/Input";
 import { colors, typography, spacing, globalStyles } from "../../constants/globalStyles";
-import { wp, hp, validateForm } from "../../utils/helpers";
+import { wp, hp } from "../../utils/helpers";
+
+const dark = colors.dark;
 
 function SignupScreen() {
-  const [formData, setFormData] = useState({ username: '', email: '', password: '', confirmPassword: '' });
+  const [formData, setFormData] = useState({ userName: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -21,62 +23,69 @@ function SignupScreen() {
   };
 
   const handleValidation = () => {
-    const error = validateForm(formData);
-    setError(error);
-    return !error;
+    // Check if passwords match
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+
+    const validation = validateRegistrationData(formData);
+    if (!validation.isValid) {
+      const errorMessage = Object.values(validation.errors)[0];
+      setError(errorMessage);
+      return false;
+    }
+    setError('');
+    return true;
   };
 
   async function signupHandler() {
     setError('');
     if (!handleValidation()) return;
+    
     setIsLoading(true);
     setIsAuthenticating(true);
 
-    console.log(formData.email + " - " + formData.password);
-    router.replace({
-      pathname: "/auth/OtpScreen",
-      params: { email: formData.email },
-    });
-    /*
     try {
-      let res = await apiCall("post", "/auth/register", {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-      });
-      console.log("res :" + JSON.stringify(res));
-
-      if (res.success) {
-        // go to homepage
-        const isVerified = res.data.isVerified;
-        if (isVerified == 0) {
-          router.replace({
-            pathname: "/auth/OtpScreen",
-            params: { email: formData.email },
-          });
-        }
-        // const refreshToken = res.data.refreshToken;
-        // authCtx.authenticate(accessToken, refreshToken);
+      const result = await registerUser(formData);
+      
+      if (result.success) {
+        // Show success message
+        Alert.alert(
+          'Registration Successful',
+          'Your account has been created successfully. You can now login.',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/auth/LoginScreen')
+            }
+          ]
+        );
       } else {
-        console.log(res.data.errorCode);
-        // Alert.alert("Authentication failed!", "User Already exist.");
-        setIsAuthenticating(false);
+        setError(result.message || 'Registration failed');
+        
+        // Show specific error messages for different error types
+        if (result.error?.status === 409) {
+          if (result.error.message.includes('Username')) {
+            setError('Username already exists. Please choose a different username.');
+          } else {
+            setError('Email or username already exists. Please use a different email or login.');
+          }
+        } else if (result.error?.status === 400) {
+          setError('Please check your input and try again.');
+        }
       }
     } catch (error) {
-      // Alert.alert(
-      //   "Authentication failed!",
-      //   "Could not log you in. Please check your credentials or try again later!"
-      // );
+      console.error('Registration error:', error);
+      setError('Network error. Please check your connection.');
+    } finally {
+      setIsLoading(false);
       setIsAuthenticating(false);
     }
-    */
-    setIsLoading(false);
-    setIsAuthenticating(false);
   }
 
   if (isAuthenticating) {
-    return <Text>Loading...</Text>;
+    return <Text style={{color: dark.text}}>Loading...</Text>;
   }
 
   return (
@@ -84,16 +93,16 @@ function SignupScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1 }}
     >
-      <View style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <View style={{ width:wp('100%'), padding: spacing.lg, backgroundColor: 'white' }}>
-          <Text style={[typography.h2, globalStyles.textCenter, { marginBottom: spacing.xl }]}>Sign Up for Tiktok</Text>
-          <Text style={[typography.caption, globalStyles.textCenter, { marginBottom: spacing.xl, color: colors.gray[400] }]}>Create an account to follow creators, like videos, comment, and more.</Text>
+      <View style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: dark.background }]}> 
+        <View style={{ width:wp('100%'), padding: spacing.lg, backgroundColor: dark.background }}>
+          <Text style={[typography.h2, globalStyles.textCenter, { marginBottom: spacing.xl, color: dark.text }]}>Sign Up for Tiktok</Text>
+          <Text style={[typography.caption, globalStyles.textCenter, { marginBottom: spacing.xl, color: dark.subtext }]}>Create an account to follow creators, like videos, comment, and more.</Text>
           <Input
             type="text"
             icon="person-outline"
             placeholder="Username"
-            formData={formData.username}
-            handleInputChange={(value) => handleInputChange('username', value)}
+            formData={formData.userName}
+            handleInputChange={(value) => handleInputChange('userName', value)}
             isLoading={isLoading}
           />
           <Input
@@ -124,7 +133,7 @@ function SignupScreen() {
           <TouchableOpacity
             style={[
               globalStyles.button,
-              globalStyles.buttonPrimary,
+              { backgroundColor: dark.primary },
               isLoading && globalStyles.buttonDisabled,
               { marginTop: spacing.xl }
             ]}
@@ -132,9 +141,9 @@ function SignupScreen() {
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator color={colors.white} />
+              <ActivityIndicator color={dark.text} />
             ) : (
-              <Text style={globalStyles.buttonText}>Sign Up</Text>
+              <Text style={[globalStyles.buttonText, {color: dark.text}]}>Sign Up</Text>
             )}
           </TouchableOpacity>
           <TouchableOpacity
@@ -142,7 +151,7 @@ function SignupScreen() {
             onPress={() => router.replace('/auth/LoginScreen')}
             disabled={isLoading}
           >
-            <Text style={[typography.caption,globalStyles.textCenter, { color: colors.primary }]}>Already have an account? Login.</Text>
+            <Text style={[typography.caption,globalStyles.textCenter, { color: dark.primary }]}>Already have an account? Login.</Text>
           </TouchableOpacity>
         </View>
       </View>

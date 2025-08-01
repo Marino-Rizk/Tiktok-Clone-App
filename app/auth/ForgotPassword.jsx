@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { wp, hp, validateForm } from "../../utils/helpers";
 // import { apiCall } from "../../utils/api";
 
+const dark = colors.dark;
+
 function ForgotPassword() {
   const [formData, setFormData] = useState({ email: '' });
   const [error, setError] = useState('');
@@ -42,24 +44,6 @@ function ForgotPassword() {
     setIsAuthenticating(true);
 
     console.log("Reset request sent for email:", formData.email);
-    // router.push({ pathname: "/otp", params: { email: formData.email } });
-    /*
-    try {
-      const res = await apiCall("post", "/auth/forgot-password", {
-        email: formData.email,
-      });
-      if (res.success) {
-        router.push({ pathname: "/otp", params: { email: formData.email } });
-      } else {
-        // Alert.alert("Error", res.data.message || "Unable to send reset email.");
-      }
-    } catch (e) {
-      // Alert.alert("Network Error", "Please try again later.");
-    } finally {
-      setIsAuthenticating(false);
-    }
-    */
-    // To-Do: remove mock logic
     setLinkSent(true);
     setResendTimer(60);
     setIsLoading(false);
@@ -69,12 +53,11 @@ function ForgotPassword() {
   async function resendLinkHandler() {
     if (resendTimer > 0) return;
     console.log("Resending link to", formData.email);
-    // To-Do: Implement actual resend logic, probably similar to forgotPasswordHandler
     setResendTimer(60);
   }
 
   if (isAuthenticating) {
-    return <Text>Loading...</Text>;
+    return <Text style={{color: dark.text}}>Loading...</Text>;
   }
 
   return (
@@ -82,16 +65,16 @@ function ForgotPassword() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1 }}
     >
-      <View style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center', width: wp('100%'), padding: spacing.lg }]}>
+      <View style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center', width: wp('100%'), padding: spacing.lg, backgroundColor: dark.background }]}> 
         <TouchableOpacity
           style={{ alignSelf: 'flex-start', marginBottom: spacing.lg, padding: 8 }}
           onPress={() => router.replace('/auth/LoginScreen')}
           disabled={isAuthenticating}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.primary} />
+          <Ionicons name="arrow-back" size={24} color={dark.primary} />
         </TouchableOpacity>
-        <Text style={[typography.h2, globalStyles.textCenter, { marginBottom: spacing.xl }]}>Forgot Password</Text>
-        <Text style={[typography.caption, globalStyles.textCenter, { marginBottom: spacing.xl, color: colors.gray[400] }]}>Enter your email to receive a password reset link.</Text>
+        <Text style={[typography.h2, globalStyles.textCenter, { marginBottom: spacing.xl, color: dark.text }]}>Forgot Password</Text>
+        <Text style={[typography.caption, globalStyles.textCenter, { marginBottom: spacing.xl, color: dark.subtext }]}>Enter your email to receive a password reset link.</Text>
         <Input
           type="email"
           icon="mail-outline"
@@ -106,7 +89,7 @@ function ForgotPassword() {
           <TouchableOpacity
             style={[
               globalStyles.button,
-              globalStyles.buttonPrimary,
+              { backgroundColor: dark.primary },
               isAuthenticating && globalStyles.buttonDisabled,
               { marginTop: spacing.xl },
             ]}
@@ -114,16 +97,16 @@ function ForgotPassword() {
             disabled={isAuthenticating}
           >
             {isLoading ? (
-              <ActivityIndicator color={colors.white} />
+              <ActivityIndicator color={dark.text} />
             ) : (
-              <Text style={globalStyles.buttonText}>Send Link</Text>
+              <Text style={[globalStyles.buttonText, {color: dark.text}]}>Send Link</Text>
             )}
           </TouchableOpacity>
         ) : (
             <TouchableOpacity
               style={[
                 globalStyles.button,
-                globalStyles.buttonPrimary,
+                { backgroundColor: dark.primary },
                 (isAuthenticating || resendTimer > 0) && globalStyles.buttonDisabled,
                 { marginTop: spacing.xl },
               ]}
@@ -131,9 +114,9 @@ function ForgotPassword() {
               disabled={isAuthenticating || resendTimer > 0}
             >
               {isLoading ? (
-                <ActivityIndicator color={colors.white} />
+                <ActivityIndicator color={dark.text} />
               ) : (
-                <Text style={[globalStyles.buttonText]}>
+                <Text style={[globalStyles.buttonText, {color: dark.text}]}>
                   {resendTimer > 0 ? `Resend Link in ${resendTimer}s` : 'Resend Link'}
                 </Text>
               )}

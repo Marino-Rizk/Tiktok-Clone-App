@@ -1,11 +1,13 @@
 import { useContext, useState } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { AuthContext } from "../../store/auth-context";
-import { apiCall } from "../../utils/api";
+import { loginUser, validateLoginData } from "../../utils/authService";
 import { useRouter } from "expo-router";
 import Input from "../../components/ui/Input";
 import { colors, typography, spacing, globalStyles } from "../../constants/globalStyles";
-import { wp, hp, validateForm } from "../../utils/helpers";
+import { wp, hp } from "../../utils/helpers";
+
+const dark = colors.dark;
 
 function LoginScreen() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -21,64 +23,55 @@ function LoginScreen() {
   };
 
   const handleValidation = () => {
-    const error = validateForm(formData);
-    setError(error);
-    return !error;
+    const validation = validateLoginData(formData);
+    if (!validation.isValid) {
+      const errorMessage = Object.values(validation.errors)[0];
+      setError(errorMessage);
+      return false;
+    }
+    setError('');
+    return true;
   };
 
   async function loginHandler() {
     setError('');
     if (!handleValidation()) return;
+    
     setIsLoading(true);
     setIsAuthenticating(true);
 
-    console.log(formData.email + " - " + formData.password);
-    router.navigate('/(tabs)')
-    /*
     try {
-      let res = await apiCall("post", "/auth/login", {
-        email: formData.email,
-        password: formData.password,
-      });
-      console.log("res " + JSON.stringify(res));
-
-      if (res.success) {
-        // go to homepage
-        const accessToken = res.data.accessToken;
-        const refreshToken = res.data.refreshToken;
-        const user = res.data.user;
-        // authCtx.authenticate(accessToken, refreshToken, user);
+      const result = await loginUser(formData);
+      
+      if (result.success) {
+        // Update auth context with user data
+        authCtx.authenticate(result.data.user);
+        
+        // Navigate to main app
+        router.replace('/(tabs)');
       } else {
-        console.log(res.data);
-        console.log(res.data.errorCode);
-        setIsAuthenticating(false);
-        if (res.data.errorCode == "forbidden") {
-          // call send otp api
-          router.replace({
-            pathname: "/Auth/OtpScreen",
-            params: { email: formData.email },
-          });
-        } else {
-          // Alert.alert("Error", res.data.errorMessage, [
-          //   { text: "Cancel", onPress: () => console.log("Cancel Pressed"), style: "cancel" },
-          //   { text: "OK", onPress: () => console.log("OK Pressed") },
-          // ]);
+        setError(result.message || 'Login failed');
+        
+        // Show specific error messages for different error types
+        if (result.error?.status === 404) {
+          setError('User not found. Please check your email.');
+        } else if (result.error?.status === 401) {
+          setError('Invalid password. Please try again.');
+        } else if (result.error?.status === 400) {
+          setError('Please check your email and password format.');
         }
       }
     } catch (error) {
-      // Alert.alert(
-      //   "Authentication failed!",
-      //   "Could not log you in. Please check your credentials or try again later!"
-      // );
+      console.error('Login error:', error);
+      setError('Network error. Please check your connection.');
+    } finally {
+      setIsLoading(false);
       setIsAuthenticating(false);
     }
-    */
-    setIsLoading(false);
-    setIsAuthenticating(false);
   }
 
   if (isAuthenticating) {
-    return <Text>Loading...</Text>;
+    return <Text style={{color: dark.text}}>Loading...</Text>;
   }
 
   return (
@@ -86,10 +79,10 @@ function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1 }}
     >
-      <View style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <View style={[{padding:spacing.lg,width:wp('100%')}]}>
-          <Text style={[typography.h2, globalStyles.textCenter, { marginBottom: spacing.xl }]}>Login to Tiktok</Text>
-          <Text style={[typography.caption, globalStyles.textCenter, { marginBottom: spacing.xl, color: colors.gray[400] }]}>Manage your account, check notifications, comment on videos, and more.</Text>
+      <View style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: dark.background }]}> 
+        <View style={{padding:spacing.lg, width:wp('100%'), backgroundColor: dark.background}}>
+          <Text style={[typography.h2, globalStyles.textCenter, { marginBottom: spacing.xl, color: dark.text }]}>Login to Tiktok</Text>
+          <Text style={[typography.caption, globalStyles.textCenter, { marginBottom: spacing.xl, color: dark.subtext }]}>Manage your account, check notifications, comment on videos, and more.</Text>
           <Input
             type="email"
             icon="mail-outline"
@@ -110,7 +103,7 @@ function LoginScreen() {
           <TouchableOpacity
             style={[
               globalStyles.button,
-              globalStyles.buttonPrimary,
+              { backgroundColor: dark.primary },
               isLoading && globalStyles.buttonDisabled,
               { marginTop: spacing.xl }
             ]}
@@ -118,9 +111,9 @@ function LoginScreen() {
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator color={colors.white} />
+              <ActivityIndicator color={dark.text} />
             ) : (
-              <Text style={globalStyles.buttonText}>Login</Text>
+              <Text style={[globalStyles.buttonText, {color: dark.text}]}>Login</Text>
             )}
           </TouchableOpacity>
           <TouchableOpacity
@@ -128,14 +121,14 @@ function LoginScreen() {
             onPress={() => router.replace('/auth/SignupScreen')}
             disabled={isLoading}
           >
-            <Text style={[globalStyles.textCenter,typography.caption ,{color:colors.primary}]}>Don't have an account? Sign Up</Text>
+            <Text style={[globalStyles.textCenter,typography.caption ,{color:dark.primary}]}>Don't have an account? Sign Up</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={{ marginTop: spacing.sm }}
             onPress={() => router.replace('/auth/ForgotPassword')}
             disabled={isLoading}
           >
-            <Text style={[globalStyles.textCenter,typography.caption, { color: colors.primary }]}>Forgot Password?</Text>
+            <Text style={[globalStyles.textCenter,typography.caption, { color: dark.primary }]}>Forgot Password?</Text>
           </TouchableOpacity>
         </View>
       </View>
