@@ -82,11 +82,11 @@ export default function Inbox() {
       prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
     );
     if (notification.type === 'follow') {
-      navigation.navigate('Profile', { userId: notification.fromUser.id });
+      navigation.navigate('UserProfile', { userId: notification.fromUser.id });
     } else if (notification.targetVideo) {
       navigation.navigate('Video', { videoId: notification.targetVideo.id });
     } else {
-      navigation.navigate('Profile', { userId: notification.fromUser.id });
+      navigation.navigate('UserProfile', { userId: notification.fromUser.id });
     }
   };
 

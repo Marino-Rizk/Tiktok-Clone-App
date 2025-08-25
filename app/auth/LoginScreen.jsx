@@ -44,8 +44,8 @@ function LoginScreen() {
       const result = await loginUser(formData);
       
       if (result.success) {
-        // Update auth context with user data
-        authCtx.authenticate(result.data.user);
+        // Update auth context with tokens and user data
+        authCtx.authenticate(result.data.accessToken, result.data.refreshToken, result.data.user);
         
         // Navigate to main app
         router.replace('/(tabs)');

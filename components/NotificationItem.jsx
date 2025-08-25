@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Image, View, Text, StyleSheet } from 'react-native';
 import { typography, spacing, colors } from '../constants/globalStyles';
+import { defaultAvatar } from '../constants/images';
 import { timeAgo } from '../utils/helpers';
 
 function getNotificationText(type, fromUser, targetVideo) {
@@ -30,7 +31,7 @@ export default function NotificationItem({ notification, onPress, isDark }) {
       onPress={onPress}
       activeOpacity={0.8}
     >
-      <Image source={{ uri: fromUser.avatar }} style={styles.avatar} />
+      <Image source={fromUser?.avatar ? { uri: fromUser.avatar } : defaultAvatar} defaultSource={defaultAvatar} style={styles.avatar} />
       <View style={styles.notificationContent}>
         <Text style={[typography.body, { color: textColor }]}>{getNotificationText(type, fromUser, targetVideo)}</Text>
         <Text style={[styles.timestamp, { color: secondaryText }]}>{timeAgo(createdAt)}</Text>

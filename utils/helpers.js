@@ -60,3 +60,71 @@ export function formatViews(num) {
 }
 
 export { wp, hp, validateForm };
+
+// Media helpers
+export function guessMimeFromUri(uri, kind) {
+  try {
+    const lower = (uri || '').toLowerCase();
+    const afterQ = lower.split('?')[0];
+    const ext = afterQ.includes('.') ? afterQ.substring(afterQ.lastIndexOf('.') + 1) : '';
+    if (kind === 'video') {
+      if (ext === 'mp4') return 'video/mp4';
+      if (ext === 'mov') return 'video/mov';
+      if (ext === 'avi') return 'video/avi';
+      if (ext === 'mkv') return 'video/mkv';
+      return 'video/mp4';
+    }
+    if (kind === 'image') {
+      if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+      if (ext === 'png') return 'image/png';
+      if (ext === 'webp') return 'image/webp';
+      return 'image/jpeg';
+    }
+    return null;
+  } catch {
+    return kind === 'video' ? 'video/mp4' : 'image/jpeg';
+  }
+}
+
+export function normalizeMime(kind, mime, uri) {
+  if (!mime || !mime.includes('/')) {
+    return guessMimeFromUri(uri, kind);
+  }
+  const lower = mime.toLowerCase();
+  if (kind === 'video') {
+    if (lower === 'video/quicktime') return 'video/mov';
+    if (lower === 'video/x-matroska') return 'video/mkv';
+    if (lower === 'video/3gpp' || lower === 'video/3gp') return 'video/mp4';
+    return lower;
+  }
+  if (kind === 'image') {
+    if (lower === 'image/jpg') return 'image/jpeg';
+    return lower;
+  }
+  return lower;
+}
+
+export function normalizePickedAsset(asset, kind) {
+  if (!asset) return null;
+  const uri = asset.uri;
+  const providedMime = asset.mimeType || asset.type;
+  const mime = normalizeMime(kind, providedMime, uri);
+  const lower = (uri || '').toLowerCase();
+  const afterQ = lower.split('?')[0];
+  const ext = afterQ.includes('.') ? afterQ.substring(afterQ.lastIndexOf('.') + 1) : (kind === 'video' ? 'mp4' : 'jpg');
+  const fallbackName = `${kind === 'video' ? 'video' : 'thumbnail'}.${ext}`;
+  return {
+    uri,
+    type: mime,
+    name: asset.fileName || asset.name || fallbackName,
+    width: asset.width,
+    height: asset.height,
+    duration: asset.duration,
+    size: asset.fileSize || asset.size,
+  };
+}
+
+export function assetsAreSame(a, b) {
+  if (!a || !b) return false;
+  return a.uri === b.uri;
+}

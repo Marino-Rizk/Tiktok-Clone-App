@@ -1,9 +1,10 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, globalStyles } from '../constants/globalStyles';
 import { hp, wp } from '../utils/helpers';
 import CommentModal from './CommentModal';
+import { defaultAvatar } from '../constants/images';
 
 const VideoActions = ({
   likes = 0,
@@ -11,15 +12,17 @@ const VideoActions = ({
   shares = 0,
   username = 'username',
   caption = 'Video caption goes here',
-  profileImage = 'https://picsum.photos/200',
+  profileImage,
   onLike,
   onComment,
   onShare,
   onProfilePress,
-  isLiked
+  onFollowPress,
+  isLiked,
+  isFollowing,
 }) => {
-  const [isCommentModalVisible, setIsCommentModalVisible] = useState(false);
   const likeScale = useRef(new Animated.Value(1)).current;
+  const [localCommentVisible, setLocalCommentVisible] = useState(false);
 
   const handleLike = () => {
     
@@ -27,12 +30,21 @@ const VideoActions = ({
   };
 
   const handleComment = () => {
-    setIsCommentModalVisible(true);
-    onComment && onComment();
+    if (onComment) {
+      onComment();
+    } else {
+      setLocalCommentVisible(true);
+    }
   };
 
   const ActionButton = ({ icon, count, onPress, isLiked = false, animated = false }) => (
-    <TouchableOpacity style={styles.actionButton} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.actionButton}
+      onPress={onPress}
+      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      accessibilityRole="button"
+      accessibilityLabel={icon === 'chatbubble-outline' ? 'Open comments' : icon === 'heart' || icon === 'heart-outline' ? 'Like' : 'Share'}
+    >
       <Animated.View style={animated ? { transform: [{ scale: likeScale }] } : {}}>
         <Ionicons
           name={icon}
@@ -51,13 +63,23 @@ const VideoActions = ({
           style={styles.profileButton}
           onPress={onProfilePress}
         >
-          <Image
-            source={{ uri: profileImage }}
-            style={styles.profileImage}
-          />
-          <View style={styles.followButton}>
-            <Ionicons name="add" size={16} color={colors.white} />
-          </View>
+          {profileImage ? (
+            <Image
+              source={{ uri: profileImage }}
+              defaultSource={defaultAvatar}
+              style={styles.profileImage}
+            />
+          ) : (
+            <Image
+              source={defaultAvatar}
+              style={styles.profileImage}
+            />
+          )}
+          {!!onFollowPress && isFollowing === false && (
+            <TouchableOpacity style={styles.followButton} onPress={onFollowPress}>
+              <Ionicons name="add" size={16} color={colors.white} />
+            </TouchableOpacity>
+          )}
         </TouchableOpacity>
 
         <ActionButton
@@ -84,25 +106,11 @@ const VideoActions = ({
         <Text style={styles.caption}>{caption}</Text>
       </View>
 
+      {/* Fallback local modal when parent does not control comments */}
       <CommentModal
-        visible={isCommentModalVisible}
-        onClose={() => setIsCommentModalVisible(false)}
-        comments={[
-          {
-            id: '1',
-            username: 'user1',
-            text: 'Great video!',
-            time: '2h ago',
-            userImage: 'https://picsum.photos/200'
-          },
-          {
-            id: '2',
-            username: 'user2',
-            text: 'Love this content!',
-            time: '1h ago',
-            userImage: 'https://picsum.photos/201'
-          }
-        ]}
+        visible={localCommentVisible && !onComment}
+        onClose={() => setLocalCommentVisible(false)}
+        comments={[]}
       />
     </View>
   );
@@ -111,7 +119,7 @@ const VideoActions = ({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: hp(2),
+    bottom: hp(11),
     left: 0,
     right: 0,
     paddingHorizontal: spacing.lg,
@@ -137,8 +145,8 @@ const styles = StyleSheet.create({
   },
   profileImage: {
     width: wp(12),
-    aspectRatio:1,
-    borderRadius: wp(100),
+    height: wp(12),
+    borderRadius: wp(6),
     borderWidth: 2,
     borderColor: colors.white,
   },

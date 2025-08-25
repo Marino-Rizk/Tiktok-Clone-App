@@ -5,7 +5,6 @@ import Input from "../../components/ui/Input";
 import { colors, typography, spacing, globalStyles } from "../../constants/globalStyles";
 import { Ionicons } from '@expo/vector-icons';
 import { wp, hp, validateForm } from "../../utils/helpers";
-// import { apiCall } from "../../utils/api";
 
 const dark = colors.dark;
 

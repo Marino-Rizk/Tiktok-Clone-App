@@ -1,153 +1,98 @@
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, FlatList, RefreshControl } from 'react-native';
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, FlatList, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
 import { theme, typography, spacing, globalStyles } from '../../constants/globalStyles';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { useLocalSearchParams } from 'expo-router';
 import { wp, hp } from '../../utils/helpers';
-import { defaultAvatar } from '../../constants/images';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getUserProfile } from '../../utils/userService';
+import { getUserProfile, toggleFollowStatus } from '../../utils/userService';
 import { getUserVideos } from '../../utils/videoService';
-import { getLikesForAllVideos } from '../../utils/videoService';
-import { AuthContext } from '../../store/auth-context';
+import { defaultAvatar } from '../../constants/images';
 
-
-export default function Profile({ route }) {
+export default function UserProfile({ route }) {
   const navigation = useNavigation();
-  const { logout } = useContext(AuthContext);
   const [user, setUser] = useState(null);
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [totalLikes, setTotalLikes] = useState(0);
-  const [videoLikesMap, setVideoLikesMap] = useState({});
-  const [refreshing, setRefreshing] = useState(false);
-  const isFocused = useIsFocused();
-  const scrollRef = useRef(null);
 
+  // Get navigation parameters from both React Navigation and expo-router
+  const rnParams = route?.params || {};
+  const expoParams = useLocalSearchParams ? useLocalSearchParams() : {};
+  const userIdParam = rnParams.userId || expoParams.userId || rnParams._id || expoParams._id || rnParams.id || expoParams.id;
+  const userNameParam = rnParams.userName || expoParams.userName;
+  console.log('🔍 UserProfile page received params:', { rnParams, expoParams, userIdParam, userNameParam });
 
   // Calculate thumbnail size
   const numColumns = 3;
   const thumbnailSize = (wp(100) - spacing.sm * (numColumns + 1)) / numColumns;
 
   // Fetch user profile and videos
-  const loadProfile = React.useCallback(async (useFullScreenLoading = false) => {
-    try {
-      if (useFullScreenLoading) {
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
         setLoading(true);
-      } else {
-        setRefreshing(true);
-      }
-      let profileUserId = null;
-      if (route?.params?.userId) {
-        // Viewing another user's profile
-        profileUserId = route.params.userId;
-      }
-      let userResponse;
-      if (profileUserId) {
-        // Fetch other user's profile using userId option
-        userResponse = await getUserProfile({ userId: profileUserId });
-      } else {
-        userResponse = await getUserProfile();
-      }
-      if (userResponse.success) {
-        setUser(userResponse.data);
-        // Fetch videos for the correct user
-        const videosResponse = await getUserVideos(profileUserId ? { userId: profileUserId } : {});
-        if (videosResponse.success) {
-          // Normalize videos to always have the correct fields for VideoViewer/VideoListItem
-          setVideos((videosResponse.data.videos || [])
-            .filter(v => v.videoUrl && typeof v.videoUrl === 'string' && v.videoUrl.trim() !== '')
-            .map(v => ({
-              ...v,
-              id: v._id,
-              uri: v.videoUrl, // backend provides absolute URL
-              likes: v.likeCount || 0,
-              comments: v.commentCount || 0,
-              shares: v.shares || 0, // If you have a shares field, otherwise default to 0
-              caption: v.caption || '',
-              profileImage: v.userId && v.userId.imageUrl ? v.userId.imageUrl : null,
-              username: v.userId && v.userId.userName ? v.userId.userName : '',
-              isLiked: false // You can update this if you have like info per user
-            })));
-          // Fetch like counts for all videos
-          const likesResponse = await getLikesForAllVideos();
-          if (likesResponse.success) {
-            const likesMap = {};
-            let userTotalLikes = 0;
-            likesResponse.data.videos.forEach(item => {
-              likesMap[item.videoId] = item.likeCount;
-            });
-            (videosResponse.data.videos || []).forEach(video => {
-              userTotalLikes += likesMap[video._id] || 0;
-            });
-            setVideoLikesMap(likesMap);
-            setTotalLikes(userTotalLikes);
+        console.log('Fetching user profile...');
+
+        const { getAccessToken } = await import('../../utils/tokenStore');
+        const token = getAccessToken();
+        console.log('In-memory token exists:', !!token);
+
+        const profileOptions = userIdParam ? { userId: String(userIdParam) } : {};
+        const response = await getUserProfile(profileOptions);
+        console.log('Profile response:', response);
+
+        if (response.success) {
+          console.log('User data:', response.data);
+          setUser(response.data);
+
+          // Fetch user videos
+          console.log('Fetching user videos...');
+          const videosOptions = userIdParam ? { userId: String(userIdParam) } : {};
+          const videosResponse = await getUserVideos(videosOptions);
+          console.log('Videos response:', videosResponse);
+
+          if (videosResponse.success) {
+            console.log('Videos data:', videosResponse.data.videos || []);
+            setVideos((videosResponse.data.videos || []));
           } else {
-            setTotalLikes(0);
-            setVideoLikesMap({});
+            console.log('Videos fetch failed:', videosResponse.error);
+            setVideos([]);
           }
         } else {
-          setVideos([]);
-          setTotalLikes(0);
-          setVideoLikesMap({});
+          console.log('Profile fetch failed:', response.error);
+          setError(response.error.message);
         }
+      } catch (err) {
+        console.error('Profile fetch error:', err);
+        setError('Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [userIdParam]);
+
+  const handleFollow = async () => {
+    if (!user) return;
+
+    try {
+      const response = await toggleFollowStatus(user._id, user.isFollowing);
+
+      if (response.success) {
+        setUser(prev => ({
+          ...prev,
+          isFollowing: !prev.isFollowing,
+          follower_count: prev.isFollowing ? prev.follower_count - 1 : prev.follower_count + 1
+        }));
       } else {
-        setError(userResponse.error.message);
+        Alert.alert('Error', response.error.message);
       }
     } catch (err) {
-      setError('Failed to load profile');
-    } finally {
-      if (useFullScreenLoading) {
-        setLoading(false);
-      } else {
-        setRefreshing(false);
-      }
-    }
-  }, [route?.params?.userId]);
-
-  useEffect(() => {
-    loadProfile(true);
-  }, [loadProfile]);
-
-  // Refresh when the profile screen gains focus (helps after login/logout or returning from edits)
-  useEffect(() => {
-    if (isFocused && !loading && !refreshing) {
-      loadProfile(true);
-    }
-  }, [isFocused, loadProfile]);
-
-  // Re-tap Profile tab to refresh and scroll to top
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('tabPress', () => {
-      try {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTo({ y: 0, animated: true });
-        }
-        loadProfile(false);
-      } catch (e) {
-        // no-op
-      }
-    });
-    return unsubscribe;
-  }, [navigation, loadProfile]);
-
-  const handleEditProfile = () => {
-    navigation.navigate('EditProfile');
-  };
-
-  const handleLogout = () => {
-    try {
-      logout();
-      // Clear any previous user data from this screen so a new login can replace it cleanly
-      setUser(null);
-      setVideos([]);
-      setTotalLikes(0);
-      setVideoLikesMap({});
-      setError(null);
-    } catch (e) {
-      // no-op
+      Alert.alert('Error', 'Failed to update follow status');
     }
   };
 
@@ -203,23 +148,7 @@ export default function Profile({ route }) {
 
   return (
     <SafeAreaView style={[globalStyles.container, styles.container, { backgroundColor: theme.background }]} edges={["top", "bottom", "left", "right"]}>
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
-        <Ionicons name="exit-outline" size={18} color={theme.text} />
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={{ paddingBottom: 32 }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => loadProfile(false)}
-            tintColor={theme.subtext}
-            colors={[theme.primary]}
-          />
-        }
-      >
+      <ScrollView contentContainerStyle={{ paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
         <View style={styles.headerSection}>
           <Image
             source={user?.imageUrl ? { uri: user.imageUrl } : defaultAvatar}
@@ -240,14 +169,14 @@ export default function Profile({ route }) {
             <Text style={[typography.h3, { color: theme.text }]}>{user.followers || 0}</Text>
             <Text style={[typography.caption, { color: theme.subtext }]}>Followers </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.statItem} onPress={() => handleStatPress('likes')}>
-            <Text style={[typography.h3, { color: theme.text }]}>{totalLikes}</Text>
+          <View style={styles.statItem}>
+            <Text style={[typography.h3, { color: theme.text }]}>{0}</Text>
             <Text style={[typography.caption, { color: theme.subtext }]}>Likes </Text>
-          </TouchableOpacity>
+          </View>
         </View>
         <View style={styles.actionRow}>
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.primary }]} onPress={handleEditProfile}>
-            <Text style={[typography.body, { color: theme.text, fontWeight: '600' }]}>Edit Profile</Text>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: user.isFollowing ? theme.subtext : theme.primary }]} onPress={handleFollow}>
+            <Text style={[typography.body, { color: theme.text, fontWeight: '600' }]}>{user.isFollowing ? 'Unfollow' : 'Follow'}</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.videosSection}>
@@ -381,21 +310,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
   },
-  logoutButton: {
-    position: 'absolute',
-    top: spacing.xxl,
-    right: spacing.lg,
-    zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.card,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  logoutText: {
-    color: theme.text,
-    marginLeft: 6,
-    fontWeight: '600',
-  },
-});
+}); 

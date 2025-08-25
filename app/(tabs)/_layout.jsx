@@ -1,14 +1,23 @@
-import { Tabs } from 'expo-router';
+import { useContext } from 'react';
+import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing } from '../../constants/globalStyles';
+import { colors, spacing, theme } from '../../constants/globalStyles';
 import { hp } from '../../utils/helpers';
+import { AuthContext } from '../../store/auth-context';
 
 export default function TabLayout() {
+  const { isAuthenticated, isBootstrapping } = useContext(AuthContext);
+
+  if (!isBootstrapping && !isAuthenticated) {
+    return <Redirect href="/auth/LoginScreen" />;
+  }
+
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.gray[100],
+        sceneContainerStyle: { backgroundColor: theme.background },
         tabBarStyle: {
           backgroundColor: colors.black,
           borderTopWidth: 0,
@@ -44,7 +53,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="create"
         options={{
-          title: 'Create',
+          title: 'Upload',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="add-circle" size={size} color={color} />
           ),
@@ -66,6 +75,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="UserProfile"
+        options={{
+          href: null, // This hides it from the tab bar
+          title: 'User Profile',
         }}
       />
       <Tabs.Screen

@@ -1,64 +1,40 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Dimensions } from 'react-native';
-import React, { useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Dimensions, Alert } from 'react-native';
+import React, { useState, useEffect, useContext } from 'react';
 import { theme, typography, spacing, globalStyles } from '../../constants/globalStyles';
 import SearchBar from '../../components/ui/SearchBar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { wp } from '../../utils/helpers';
+ 
 import { useNavigation } from '@react-navigation/native';
+import { searchUsers, toggleFollowStatus } from '../../utils/userService';
+import { searchVideos } from '../../utils/videoService';
+import { buildAbsoluteUrl } from '../../utils/api';
+import { defaultAvatar } from '../../constants/images';
+import { AuthContext } from '../../store/auth-context';
 
-const mockUsers = [
-  {
-    id: '1',
-    username: 'user_one',
-    profile_picture_url: 'https://picsum.photos/50/50?1',
-    is_following: true,
-  },
-  {
-    id: '2',
-    username: 'user_two',
-    profile_picture_url: 'https://picsum.photos/50/50?2',
-    is_following: false,
-  },
-  {
-    id: '3',
-    username: 'user_three',
-    profile_picture_url: 'https://picsum.photos/50/50?3',
-    is_following: true,
-  },
-];
 
-const mockVideos = [
-  { id: 'v1', thumbnail_url: 'https://picsum.photos/200/300', view_count: 1200 },
-  { id: 'v2', thumbnail_url: 'https://picsum.photos/201/300', view_count: 980 },
-  { id: 'v3', thumbnail_url: 'https://picsum.photos/202/300', view_count: 560 },
-  { id: 'v4', thumbnail_url: 'https://picsum.photos/203/300', view_count: 320 },
-  { id: 'v5', thumbnail_url: 'https://picsum.photos/204/300', view_count: 780 },
-  { id: 'v6', thumbnail_url: 'https://picsum.photos/205/300', view_count: 450 },
-  { id: 'v7', thumbnail_url: 'https://picsum.photos/206/300', view_count: 210 },
-  { id: 'v8', thumbnail_url: 'https://picsum.photos/207/300', view_count: 150 },
-];
 
 const TABS = [
   { key: 'videos', label: 'Videos' },
   { key: 'users', label: 'Users' },
 ];
 
-const PAGE_SIZE = 6;
-
 const BUTTON_WIDTH = 100;
 
 export default function Discover() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState('videos');
-  const [videoPage, setVideoPage] = useState(1);
-  const [videoData, setVideoData] = useState(mockVideos.slice(0, PAGE_SIZE));
-  const [loadingMore, setLoadingMore] = useState(false);
+  
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState(null);
+  const [videoSearchResults, setVideoSearchResults] = useState([]);
+  const [videoSearchLoading, setVideoSearchLoading] = useState(false);
+  const [videoSearchError, setVideoSearchError] = useState(null);
   const navigation = useNavigation();
+  const { user: currentUser } = useContext(AuthContext);
+  const currentUserId = currentUser?._id || currentUser?.id || null;
 
   const handleSearch = (text) => setSearchQuery(text);
-  const handleSearchFocus = () => setIsSearching(true);
-  const handleSearchBlur = () => setIsSearching(false);
 
   // Responsive 2-column grid
   const numColumns = 2;
@@ -66,37 +42,152 @@ export default function Discover() {
   const screenWidth = Dimensions.get('window').width;
   const thumbnailSize = (screenWidth - spacing.lg * 2 - gutter * (numColumns - 1)) / numColumns;
 
-  // Mock follow toggle
-  const handleFollowToggle = (userId) => {
-    // In a real app, call API here
-    setUserState(prev => prev.map(u =>
-      u.id === userId ? { ...u, is_following: !u.is_following } : u
-    ));
+  // Search users and videos when query changes
+  useEffect(() => {
+    const performSearch = async () => {
+      if (!searchQuery.trim()) {
+        setSearchResults([]);
+        setSearchError(null);
+        setVideoSearchResults([]);
+        setVideoSearchError(null);
+        return;
+      }
+
+      try {
+        setSearchLoading(true);
+        setSearchError(null);
+        setVideoSearchLoading(true);
+        setVideoSearchError(null);
+        
+        // Search users
+        const userResponse = await searchUsers({ query: searchQuery });
+        if (userResponse.success) {
+          setSearchResults(userResponse.data.users || []);
+        } else {
+          setSearchError(userResponse.error.message);
+          setSearchResults([]);
+        }
+
+        // Search videos
+        const videoResponse = await searchVideos({ query: searchQuery });
+        if (videoResponse.success) {
+          const vids = Array.isArray(videoResponse.data.videos) ? videoResponse.data.videos : [];
+          const filtered = currentUserId
+            ? vids.filter(v => {
+                const owner = v.userId;
+                if (!owner) return true;
+                // owner can be string or populated object with _id
+                const ownerId = typeof owner === 'string' ? owner : (owner._id || owner.id);
+                return ownerId !== currentUserId;
+              })
+            : vids;
+          setVideoSearchResults(filtered);
+        } else {
+          setVideoSearchError(videoResponse.error.message);
+          setVideoSearchResults([]);
+        }
+      } catch (err) {
+        setSearchError('Failed to search users');
+        setVideoSearchError('Failed to search videos');
+        setSearchResults([]);
+        setVideoSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+        setVideoSearchLoading(false);
+      }
+    };
+
+    // Debounce search
+    const timeoutId = setTimeout(performSearch, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  const handleFollowToggle = async (userId) => {
+    try {
+      const user = searchResults.find(u => u._id === userId);
+      if (!user) {
+        return;
+      }
+
+      // Validate userId is not undefined or null
+      if (!userId) {
+        Alert.alert('Error', 'Invalid user ID');
+        return;
+      }
+      const response = await toggleFollowStatus(userId, user.isFollowing);
+      
+      if (response.success) {
+        setSearchResults(prev => prev.map(u => 
+          u._id === userId 
+            ? { ...u, isFollowing: !u.isFollowing }
+            : u
+        ));
+      } else {
+        Alert.alert('Error', response.error?.message || 'Failed to update follow status');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update follow status');
+    }
   };
 
-  // For mock, keep user state local
-  const [userState, setUserState] = useState(mockUsers);
+  // Handle user item press - navigate to user profile
+  const handleUserPress = (user) => {
+    if (!user._id) {
+      Alert.alert('Error', 'Cannot open profile - user ID is missing');
+      return;
+    }
+    
+    navigation.navigate('UserProfile', { 
+      userId: user._id,
+      userName: user.userName 
+    });
+  };
 
-  const renderUserItem = ({ item }) => (
-    <View style={styles.userItem}>
-      <Image source={{ uri: item.profile_picture_url }} style={styles.avatar} />
-      <Text style={[typography.body, { color: theme.text, flex: 1, marginLeft: 12 }]}>{item.username}</Text>
-      <TouchableOpacity
-        style={[
-          styles.followBtn,
-          { backgroundColor: item.is_following ? theme.subtext : theme.primary, width: BUTTON_WIDTH }
-        ]}
-        onPress={() => handleFollowToggle(item.id)}
+  const renderUserItem = ({ item }) => {
+    // Validate item has required fields - use actual backend field names
+    if (!item || !item._id) {
+      return null;
+    }
+
+    // Resolve avatar URL with fallback
+    const avatarUrl = buildAbsoluteUrl(item.imageUrl || item.profilePicture || item.profile_picture_url);
+
+    return (
+      <TouchableOpacity 
+        style={styles.userItem}
+        onPress={() => handleUserPress(item)}
+        activeOpacity={0.7}
       >
-        <Text style={{ color: theme.text, fontWeight: '600', textAlign: 'center' }}>
-          {item.is_following ? 'Unfollow' : 'Follow'}
-        </Text>
+        <View style={styles.avatarContainer}>
+          {item.blurhash && (
+            <View style={[styles.avatar, styles.blurhashPlaceholder]} />
+          )}
+          <Image 
+            source={avatarUrl ? { uri: avatarUrl } : defaultAvatar} 
+            defaultSource={defaultAvatar}
+            style={styles.avatar} 
+            resizeMode="cover"
+          />
+        </View>
+        <Text style={[typography.body, { color: theme.text, flex: 1, marginLeft: 12 }]}>{item.userName}</Text>
+        <TouchableOpacity
+          style={[
+            styles.followBtn,
+            { backgroundColor: item.isFollowing ? theme.subtext : theme.primary, width: BUTTON_WIDTH }
+          ]}
+          onPress={() => handleFollowToggle(item._id)}
+        >
+          <Text style={{ color: theme.text, fontWeight: '600', textAlign: 'center' }}>
+            {item.isFollowing ? 'Unfollow' : 'Follow'}
+          </Text>
+        </TouchableOpacity>
       </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   const renderVideoItem = ({ item, index }) => (
     <TouchableOpacity
+      key={item._id || `video-${index}`}
       style={[styles.videoThumbnail, { width: thumbnailSize, height: thumbnailSize * 1.5, margin: gutter / 2 }]}
       activeOpacity={0.85}
       onPress={() => navigation.navigate('VideoViewer', {
@@ -104,33 +195,18 @@ export default function Discover() {
         initialIndex: index
       })}
     >
-      <Image source={{ uri: item.thumbnail_url }} style={styles.thumbnailImage} resizeMode="cover" />
+      <Image source={{ uri: item.thumbnailUrl }} style={styles.thumbnailImage} resizeMode="cover" />
       <View style={styles.videoOverlay}>
-        <Text style={styles.videoViews}>{item.view_count} views</Text>
+        <Text style={styles.videoViews}>{item.views || 0} views</Text>
       </View>
     </TouchableOpacity>
   );
 
-  const handleLoadMoreVideos = () => {
-    if (loadingMore) return;
-    if (videoData.length >= mockVideos.length) return;
-    setLoadingMore(true);
-    setTimeout(() => {
-      const nextPage = videoPage + 1;
-      const newData = mockVideos.slice(0, nextPage * PAGE_SIZE);
-      setVideoData(newData);
-      setVideoPage(nextPage);
-      setLoadingMore(false);
-    }, 500);
-  };
+  
 
   // Filtered data for search
-  const filteredVideos = searchQuery
-    ? mockVideos.filter(v => v.id.includes(searchQuery) || String(v.view_count).includes(searchQuery))
-    : videoData;
-  const filteredUsers = searchQuery
-    ? mockUsers.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase()))
-    : mockUsers;
+  const filteredVideos = videoSearchResults;
+  const filteredUsers = searchQuery ? searchResults : [];
 
   return (
     <SafeAreaView style={[globalStyles.container, styles.container]} edges={["top", "bottom", "left", "right"]}>
@@ -140,8 +216,6 @@ export default function Discover() {
       <SearchBar
         placeholder="Search videos or users"
         onSearch={handleSearch}
-        onFocus={handleSearchFocus}
-        onBlur={handleSearchBlur}
         style={styles.searchBar}
         inputStyle={styles.searchInput}
       />
@@ -158,26 +232,52 @@ export default function Discover() {
       </View>
       <View style={{ flex: 1 }}>
         {activeTab === 'videos' && (
-          <FlatList
-            data={filteredVideos}
-            renderItem={renderVideoItem}
-            keyExtractor={item => item.id}
-            numColumns={numColumns}
-            contentContainerStyle={{ padding: 0 }}
-            columnWrapperStyle={{ justifyContent: 'space-between' }}
-            onEndReached={handleLoadMoreVideos}
-            onEndReachedThreshold={0.5}
-            ListFooterComponent={loadingMore ? <Text style={{ color: theme.subtext, textAlign: 'center', margin: 16 }}>Loading...</Text> : null}
-            ListEmptyComponent={<Text style={{ color: theme.subtext, textAlign: 'center', marginTop: 32 }}>No videos found.</Text>}
-            style={{ flex: 1 }}
-          />
+          searchQuery ? (
+            <FlatList
+              data={filteredVideos}
+              renderItem={renderVideoItem}
+              keyExtractor={item => item._id}
+              numColumns={numColumns}
+              contentContainerStyle={{ padding: 0 }}
+              columnWrapperStyle={{ justifyContent: 'space-between' }}
+              
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  {videoSearchLoading ? (
+                    <Text style={{ color: theme.subtext, textAlign: 'center' }}>Searching videos...</Text>
+                  ) : videoSearchError ? (
+                    <Text style={{ color: 'red', textAlign: 'center' }}>{videoSearchError}</Text>
+                  ) : (
+                    <Text style={{ color: theme.subtext, textAlign: 'center' }}>No videos found.</Text>
+                  )}
+                </View>
+              }
+              style={{ flex: 1 }}
+            />
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={{ color: theme.subtext, textAlign: 'center' }}>Search for videos to get started.</Text>
+            </View>
+          )
         )}
         {activeTab === 'users' && (
           <FlatList
-            data={filteredUsers.map(u => userState.find(us => us.id === u.id) || u)}
+            data={filteredUsers.filter(item => item && item._id)}
             renderItem={renderUserItem}
-            keyExtractor={item => item.id}
-            ListEmptyComponent={<Text style={{ color: theme.subtext, textAlign: 'center', marginTop: 32 }}>No users found.</Text>}
+            keyExtractor={item => item._id}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                {searchLoading ? (
+                  <Text style={{ color: theme.subtext, textAlign: 'center' }}>Searching...</Text>
+                ) : searchError ? (
+                  <Text style={{ color: 'red', textAlign: 'center' }}>{searchError}</Text>
+                ) : searchQuery ? (
+                  <Text style={{ color: theme.subtext, textAlign: 'center' }}>No users found.</Text>
+                ) : (
+                  <Text style={{ color: theme.subtext, textAlign: 'center' }}>Search for users to get started.</Text>
+                )}
+              </View>
+            }
             style={{ flex: 1 }}
           />
         )}
@@ -264,10 +364,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
   },
-  avatar: {
+  avatarContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
+    overflow: 'hidden',
+    marginRight: 12,
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+  },
+  blurhashPlaceholder: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: theme.card,
   },
   followBtn: {
@@ -276,5 +389,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 32,
   },
 }); 

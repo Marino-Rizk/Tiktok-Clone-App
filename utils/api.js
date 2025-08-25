@@ -1,13 +1,13 @@
 import axios from "axios";
-import { getStorage } from "../store/mainStorage";
+import { getStorage, removeStorage, setStorage } from "../store/mainStorage";
+import { getAccessToken as getVolatileToken, setAccessToken as setVolatileToken, clearAccessToken as clearVolatileToken, tokenRefreshState } from "./tokenStore";
 
-  // Configuration
-  const API_CONFIG = {
-    baseURL: "http://192.168.1.12:4000/api/v1",
-    timeout: 10000,
-    retries: 3,
-    retryDelay: 1000,
-  };
+const API_CONFIG = {
+  baseURL: process.env.EXPO_PUBLIC_MAIN_URL,
+  timeout: 10000,
+  retries: 3,
+  retryDelay: 1000,
+};
 
 // API Endpoints - Centralized for easy maintenance
 export const API_ENDPOINTS = {
@@ -34,32 +34,18 @@ export const API_ENDPOINTS = {
   
   // Video endpoints
   VIDEO: {
-    UPLOAD: "/video/upload",
-    USER_VIDEOS: "/video/user",
-    USER_VIDEOS_BY_ID: (userId) => `/video/user/${userId}`,
-    VIEW: (videoId) => `/video/view/${videoId}`,
-    LIKE: (videoId) => `/video/like/${videoId}`,
-    DISLIKE: (videoId) => `/video/dislike/${videoId}`,
-    COMMENT: (videoId) => `/video/comment/${videoId}`,
-    GET_COMMENTS: (videoId) => `/video/comment/${videoId}`,
-    RECOMMENDATIONS: "/video/recommend",
-    TRENDING: "/video/trending",
-    SEARCH: "/video/search",
+    UPLOAD: "/videos/upload",
+    USER_VIDEOS: "/videos/user",
+    USER_VIDEOS_BY_ID: (userId) => `/videos/user/${userId}`,
+    VIEW: (videoId) => `/videos/view/${videoId}`,
+    LIKE: (videoId) => `/videos/like/${videoId}`,
+    DISLIKE: (videoId) => `/videos/dislike/${videoId}`,
+    COMMENT: (videoId) => `/videos/comment/${videoId}`,
+    GET_COMMENTS: (videoId) => `/videos/comment/${videoId}`,
+    RECOMMENDATIONS: "/videos/recommend",
+    SEARCH: "/videos/search",
   },
-  
-  // Feed endpoints
-  FEED: {
-    HOME: "/feed/home",
-    FOR_YOU: "/feed/for-you",
-    FOLLOWING: "/feed/following",
-  },
-  
-  // Notification endpoints
-  NOTIFICATIONS: {
-    LIST: "/notifications",
-    MARK_READ: "/notifications/mark-read",
-    SETTINGS: "/notifications/settings",
-  },
+ 
 };
 
 // Request cache for offline support
@@ -79,9 +65,15 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const token = await getStorage("token");
+      const token = getVolatileToken();
+      console.log('API Request - Token exists:', !!token);
+      console.log('API Request URL:', config.url);
+      
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log('Authorization header added');
+      } else {
+        console.log('No token found for request');
       }
     } catch (error) {
       console.warn("Failed to get auth token:", error);
@@ -93,19 +85,70 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor for global error handling
+// Helper: refresh flow orchestrator used by response interceptor
+const performRefresh = async () => {
+  if (tokenRefreshState.isRefreshing && tokenRefreshState.refreshPromise) {
+    return tokenRefreshState.refreshPromise;
+  }
+  tokenRefreshState.isRefreshing = true;
+  tokenRefreshState.refreshPromise = (async () => {
+    try {
+      const storedRefresh = await getStorage("refreshToken");
+      if (!storedRefresh) throw new Error("No refresh token available");
+      // Call refresh endpoint; mark request to skip refresh handling to avoid recursion
+      const res = await apiClient({
+        method: 'post',
+        url: API_ENDPOINTS.AUTH.REFRESH_TOKEN,
+        data: { token: storedRefresh },
+        _skipRefresh: true,
+      });
+      const { accessToken, refreshToken: newRefreshToken } = res.data || {};
+      if (!accessToken || !newRefreshToken) throw new Error("Invalid refresh response");
+      // Persist refresh token, keep access token in memory
+      await setStorage("refreshToken", newRefreshToken);
+      setVolatileToken(accessToken);
+      return accessToken;
+    } finally {
+      tokenRefreshState.isRefreshing = false;
+      // Keep last promise until next call; callers may still await it
+    }
+  })();
+  return tokenRefreshState.refreshPromise;
+};
+
+// Response interceptor for global error handling with refresh+retry
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('API Response:', response.status, response.config.url);
+    return response;
+  },
   async (error) => {
-    // Handle 401 Unauthorized - redirect to login
-    if (error.response?.status === 401) {
-      // You can dispatch a logout action here
-      console.warn("Unauthorized access, redirecting to login");
-      // Clear token and redirect to login
+    console.log('API Error:', error.response?.status, error.config?.url);
+    console.log('Error details:', error.response?.data);
+    
+    // Handle 401 Unauthorized → attempt refresh then retry once
+    const originalRequest = error.config || {};
+    if (originalRequest._skipRefresh) {
+      return Promise.reject(error);
+    }
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
       try {
-        await getStorage("token", null); // Clear token
+        const newAccess = await performRefresh();
+        if (newAccess) {
+          originalRequest.headers = {
+            ...(originalRequest.headers || {}),
+            Authorization: `Bearer ${newAccess}`,
+          };
+          return apiClient(originalRequest);
+        }
       } catch (e) {
-        console.warn("Failed to clear token:", e);
+        console.warn("Token refresh failed:", e?.message || e);
+        try {
+          await removeStorage("refreshToken");
+          await removeStorage("userData");
+        } catch {}
+        clearVolatileToken();
       }
     }
     
@@ -219,36 +262,25 @@ export const api = {
   delete: (url, options) => apiCall("delete", url, null, options),
 };
 
-// File upload helper with progress tracking
-export const uploadFile = async (url, file, onProgress = null, options = {}) => {
+// Helper: get server base (without /api/v1)
+export const getServerBaseUrl = () => {
   try {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const config = {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-      ...options,
-    };
-
-    if (onProgress) {
-      config.onUploadProgress = onProgress;
-    }
-
-    const response = await apiClient.post(url, formData, config);
-    return { success: true, data: response.data };
-  } catch (error) {
-    return {
-      success: false,
-      error: {
-        message: error.response?.data?.message || error.message || "Upload failed",
-        status: error.response?.status,
-        code: error.code,
-      },
-    };
+    return API_CONFIG.baseURL.replace(/\/?api\/v1\/?$/, '');
+  } catch (e) {
+    return API_CONFIG.baseURL;
   }
 };
+
+// Helper: build absolute URL from relative or absolute path
+export const buildAbsoluteUrl = (path) => {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  const base = getServerBaseUrl();
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${normalizedPath}`;
+};
+
+// Note: multipart upload is handled directly in videoService.uploadVideo to match backend field names
 
 // Batch upload helper for multiple files
 export const uploadMultipleFiles = async (url, files, onProgress = null, options = {}) => {

@@ -1,26 +1,13 @@
 import { api, API_ENDPOINTS } from './api';
 import { getStorage, setStorage, removeStorage } from '../store/mainStorage';
+import { setAccessToken as setVolatileToken, getAccessToken as getVolatileToken, clearAccessToken as clearVolatileToken } from './tokenStore';
 
-/**
- * Authentication Service
- * Handles all authentication-related API calls and token management
- */
-
-// Token storage keys
 const TOKEN_KEYS = {
   ACCESS_TOKEN: 'accessToken',
   REFRESH_TOKEN: 'refreshToken',
   USER_DATA: 'userData',
 };
 
-/**
- * Register a new user
- * @param {Object} userData - User registration data
- * @param {string} userData.userName - Username (min 3 characters)
- * @param {string} userData.email - Valid email address
- * @param {string} userData.password - Password (min 8 characters, must contain number)
- * @returns {Promise<Object>} Registration response
- */
 export const registerUser = async (userData) => {
   try {
     const response = await api.post(API_ENDPOINTS.AUTH.REGISTER, {
@@ -54,13 +41,6 @@ export const registerUser = async (userData) => {
   }
 };
 
-/**
- * Login user
- * @param {Object} credentials - Login credentials
- * @param {string} credentials.email - User email
- * @param {string} credentials.password - User password
- * @returns {Promise<Object>} Login response with tokens and user data
- */
 export const loginUser = async (credentials) => {
   try {
     const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, {
@@ -71,8 +51,8 @@ export const loginUser = async (credentials) => {
     if (response.success) {
       const { accessToken, refreshToken, user } = response.data;
       
-      // Store tokens and user data
-      await setStorage(TOKEN_KEYS.ACCESS_TOKEN, accessToken);
+      // Store refresh token and user data; keep access token in memory only
+      setVolatileToken(accessToken);
       await setStorage(TOKEN_KEYS.REFRESH_TOKEN, refreshToken);
       await setStorage(TOKEN_KEYS.USER_DATA, user);
 
@@ -104,15 +84,10 @@ export const loginUser = async (credentials) => {
   }
 };
 
-/**
- * Verify if the current token is valid
- * @param {string} token - Access token to verify (optional, uses stored token if not provided)
- * @returns {Promise<Object>} Verification response with user data
- */
 export const verifyToken = async (token = null) => {
   try {
-    // If no token provided, get from storage
-    const tokenToVerify = token || await getStorage(TOKEN_KEYS.ACCESS_TOKEN);
+    // Prefer in-memory token
+    const tokenToVerify = token || getVolatileToken();
     
     if (!tokenToVerify) {
       return {
@@ -125,9 +100,7 @@ export const verifyToken = async (token = null) => {
       };
     }
 
-    const response = await api.post(API_ENDPOINTS.AUTH.VERIFY_TOKEN, {
-      token: tokenToVerify
-    });
+    const response = await api.post(API_ENDPOINTS.AUTH.VERIFY_TOKEN, { token: tokenToVerify });
 
     if (response.success) {
       // Update stored user data
@@ -163,11 +136,6 @@ export const verifyToken = async (token = null) => {
   }
 };
 
-/**
- * Refresh the access token using refresh token
- * @param {string} refreshToken - Refresh token (optional, uses stored token if not provided)
- * @returns {Promise<Object>} Refresh response with new tokens
- */
 export const refreshToken = async (refreshTokenParam = null) => {
   try {
     // If no refresh token provided, get from storage
@@ -184,15 +152,13 @@ export const refreshToken = async (refreshTokenParam = null) => {
       };
     }
 
-    const response = await api.post(API_ENDPOINTS.AUTH.REFRESH_TOKEN, {
-      token: tokenToRefresh
-    });
+    const response = await api.post(API_ENDPOINTS.AUTH.REFRESH_TOKEN, { token: tokenToRefresh });
 
     if (response.success) {
       const { accessToken, refreshToken: newRefreshToken, user } = response.data;
       
-      // Update stored tokens and user data
-      await setStorage(TOKEN_KEYS.ACCESS_TOKEN, accessToken);
+      // Update in-memory access token and stored refresh token + user
+      setVolatileToken(accessToken);
       await setStorage(TOKEN_KEYS.REFRESH_TOKEN, newRefreshToken);
       await setStorage(TOKEN_KEYS.USER_DATA, user);
 
@@ -230,13 +196,10 @@ export const refreshToken = async (refreshTokenParam = null) => {
   }
 };
 
-/**
- * Logout user by clearing stored authentication data
- * @returns {Promise<Object>} Logout response
- */
 export const logoutUser = async () => {
   try {
     await clearAuthData();
+    clearVolatileToken();
     
     return {
       success: true,
@@ -254,10 +217,6 @@ export const logoutUser = async () => {
   }
 };
 
-/**
- * Get current user data from storage
- * @returns {Promise<Object|null>} User data or null if not found
- */
 export const getCurrentUser = async () => {
   try {
     const userData = await getStorage(TOKEN_KEYS.USER_DATA);
@@ -268,23 +227,15 @@ export const getCurrentUser = async () => {
   }
 };
 
-/**
- * Get stored access token
- * @returns {Promise<string|null>} Access token or null if not found
- */
 export const getAccessToken = async () => {
   try {
-    return await getStorage(TOKEN_KEYS.ACCESS_TOKEN);
+    return getVolatileToken();
   } catch (error) {
     console.warn('Failed to get access token:', error);
     return null;
   }
 };
 
-/**
- * Get stored refresh token
- * @returns {Promise<string|null>} Refresh token or null if not found
- */
 export const getRefreshToken = async () => {
   try {
     return await getStorage(TOKEN_KEYS.REFRESH_TOKEN);
@@ -294,29 +245,18 @@ export const getRefreshToken = async () => {
   }
 };
 
-/**
- * Check if user is authenticated
- * @returns {Promise<boolean>} True if user has valid tokens
- */
 export const isAuthenticated = async () => {
   try {
-    const accessToken = await getStorage(TOKEN_KEYS.ACCESS_TOKEN);
     const refreshToken = await getStorage(TOKEN_KEYS.REFRESH_TOKEN);
-    
-    return !!(accessToken && refreshToken);
+    return !!refreshToken;
   } catch (error) {
     console.warn('Failed to check authentication status:', error);
     return false;
   }
 };
 
-/**
- * Clear all stored authentication data
- * @returns {Promise<void>}
- */
 const clearAuthData = async () => {
   try {
-    await removeStorage(TOKEN_KEYS.ACCESS_TOKEN);
     await removeStorage(TOKEN_KEYS.REFRESH_TOKEN);
     await removeStorage(TOKEN_KEYS.USER_DATA);
   } catch (error) {
@@ -324,10 +264,6 @@ const clearAuthData = async () => {
   }
 };
 
-/**
- * Auto-refresh token when it expires
- * @returns {Promise<Object>} Refresh result
- */
 export const autoRefreshToken = async () => {
   try {
     const refreshResult = await refreshToken();
@@ -354,11 +290,7 @@ export const autoRefreshToken = async () => {
   }
 };
 
-/**
- * Validate user input for registration
- * @param {Object} userData - User data to validate
- * @returns {Object} Validation result
- */
+
 export const validateRegistrationData = (userData) => {
   const errors = {};
 

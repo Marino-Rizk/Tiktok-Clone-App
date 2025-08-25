@@ -2,10 +2,9 @@ import React, { useEffect, useCallback, useState } from 'react';
 import { View, Animated } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
-import { VideoView } from 'expo-video';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import VideoActions from './VideoActions';
-import CommentModal from './CommentModal';
 import VideoProgressBar from './VideoProgressBar';
 import { wp, hp } from '../utils/helpers';
 import { globalStyles, styles, colors, pauseIconStyles } from '../constants/globalStyles';
@@ -13,21 +12,26 @@ import { useEventListener } from 'expo';
 
 export default function VideoListItem({
   item,
-  player,
-  isPlayingStates,
   currentVideoId,
   handleSingleTap,
   handleDoubleTap,
   handleLike,
-  setIsCommentModalVisible,
+  onOpenComments,
   handleShare,
   handleProfilePress,
+  handleFollowPress,
   isCommentModalVisible,
 }) {
+  // item fields expected: id, uri, caption, username, profileImage, likes, comments, shares, isLiked
   const [playbackStatus, setPlaybackStatus] = useState({
     currentTime: 0,
     duration: 0,
     isPlaying: false
+  });
+
+  // Create video player for this item
+  const player = useVideoPlayer(item.uri, player => {
+    player.loop = true;
   });
 
 
@@ -58,14 +62,31 @@ export default function VideoListItem({
     }));
   });
 
+  useEventListener(player, 'playingChange', (payload) => {
+    setPlaybackStatus((prev) => ({
+      ...prev,
+      isPlaying: payload.isPlaying || false,
+    }));
+  });
+
 
   const onSingleTap = useCallback(() => {
     try {
-      handleSingleTap(item.id);
+      if (player) {
+        if (playbackStatus.isPlaying) {
+          player.pause();
+        } else {
+          player.play();
+        }
+      }
+      // Only call if provided
+      if (handleSingleTap) {
+        handleSingleTap(item.id);
+      }
     } catch (error) {
       console.log('Single tap error:', error);
     }
-  }, [handleSingleTap, item.id]);
+  }, [handleSingleTap, item.id, player, playbackStatus.isPlaying]);
 
   const onDoubleTap = useCallback(() => {
     try {
@@ -98,7 +119,7 @@ export default function VideoListItem({
 
   const composed = Gesture.Exclusive(doubleTap, singleTap);
 
-  const isCurrentlyPlaying = isPlayingStates[item.id]?.isPlaying && item.id === currentVideoId;
+  const isCurrentlyPlaying = playbackStatus.isPlaying && item.id === currentVideoId;
 
   return (
     <View style={globalStyles.videoItem}>
@@ -138,7 +159,7 @@ export default function VideoListItem({
         onSeek={handleSeek}
         style={{
           position: 'absolute',
-          bottom: 1,
+          bottom: hp(8),
           left: 0,
           right: 0,
         }}
@@ -153,9 +174,11 @@ export default function VideoListItem({
         profileImage={item.profileImage}
         isLiked={item.isLiked}
         onLike={() => handleLike(item.id)}
-        onComment={() => setIsCommentModalVisible(true)}
+        onComment={onOpenComments ? () => onOpenComments(item.id) : undefined}
         onShare={() => handleShare(item.uri)}
-        onProfilePress={handleProfilePress}
+        onProfilePress={() => handleProfilePress(item)}
+        onFollowPress={typeof item.isFollowing === 'boolean' ? () => handleFollowPress(item) : undefined}
+        isFollowing={typeof item.isFollowing === 'boolean' ? item.isFollowing : undefined}
       />
     </View>
   );

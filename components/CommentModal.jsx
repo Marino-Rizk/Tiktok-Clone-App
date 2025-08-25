@@ -1,35 +1,85 @@
-import { View, Text, StyleSheet, Modal, TouchableOpacity, FlatList, TextInput, Image, TouchableWithoutFeedback } from 'react-native';
-import React, { useState } from 'react';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, FlatList, TextInput, Image, TouchableWithoutFeedback, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, globalStyles } from '../constants/globalStyles';
-import { hp, wp } from '../utils/helpers';
+import { hp, wp, timeAgo } from '../utils/helpers';
+import { buildAbsoluteUrl } from '../utils/api';
+import { defaultAvatar } from '../constants/images';
+import { getComments as fetchCommentsApi, addComment as addCommentApi } from '../utils/videoService';
 
-const CommentModal = ({ visible, onClose, comments = [] }) => {
+const CommentModal = ({ visible, onClose, comments = [], onSend, sending = false, currentUserImage, videoId, autoFetch = false }) => {
   const [commentText, setCommentText] = useState('');
+  const [localComments, setLocalComments] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleSendComment = () => {
-    if (commentText.trim()) {
-      // TODO: Implement comment submission
-      setCommentText('');
+  const handleSendComment = async () => {
+    const text = commentText.trim();
+    if (!text) return;
+    try {
+      let result = true;
+      if (onSend) {
+        result = await onSend(text);
+      } else if (videoId) {
+        const res = await addCommentApi(videoId, text);
+        if (res.success) {
+          setLocalComments(prev => [res.data.comment, ...prev]);
+          result = true;
+        } else {
+          result = false;
+        }
+      }
+      if (result !== false) {
+        setCommentText('');
+      }
+    } catch (e) {
+      // keep the text so user can retry
     }
   };
 
-  const renderComment = ({ item }) => (
-    <View style={styles.commentItem}>
-      <Image source={{ uri: item.userImage }} style={styles.userImage} />
-      <View style={styles.commentContent}>
-        <Text style={styles.username}>@{item.username}</Text>
-        <Text style={styles.commentText}>{item.text}</Text>
-        <View style={styles.commentActions}>
-          <Text style={styles.timeText}>{item.time}</Text>
-          <TouchableOpacity style={styles.likeButton}>
-            <Ionicons name="heart-outline" size={16} color={colors.gray[400]} />
-            <Text style={styles.likeCount}>0</Text>
-          </TouchableOpacity>
+  useEffect(() => {
+    const maybeFetch = async () => {
+      if (!visible || !autoFetch || !videoId) return;
+      try {
+        setLoading(true);
+        const res = await fetchCommentsApi(videoId);
+        if (res.success) {
+          setLocalComments(res.data.comments || []);
+        } else {
+          setLocalComments([]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    maybeFetch();
+  }, [visible, autoFetch, videoId]);
+
+  const renderComment = ({ item }) => {
+    const userName = (item.userId && item.userId.userName) || item.username || 'user';
+    const displayName = (item.userId && item.userId.displayName) || userName;
+    const rawImage = (item.userId && item.userId.imageUrl) || item.userImage;
+    const userImage = rawImage ? buildAbsoluteUrl(rawImage) : null;
+    const createdAt = item.createdAt ? new Date(item.createdAt).getTime() : Date.now();
+    return (
+      <View style={styles.commentItem}>
+        {userImage ? (
+          <Image source={{ uri: userImage }} style={styles.userImage} />
+        ) : (
+          <Image source={defaultAvatar} style={styles.userImage} />
+        )}
+        <View style={styles.commentContent}>
+          <View style={styles.nameRow}>
+            <Text style={styles.displayName}>{displayName}</Text>
+            <Text style={styles.username}>@{userName}</Text>
+          </View>
+          <Text style={styles.commentText}>{item.text}</Text>
+          <View style={styles.commentActions}>
+            <Text style={styles.timeText}>{timeAgo(createdAt)}</Text>
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <Modal
@@ -50,17 +100,24 @@ const CommentModal = ({ visible, onClose, comments = [] }) => {
               </View>
 
               <FlatList
-                data={comments}
+                data={(comments && comments.length > 0) ? comments : localComments}
                 renderItem={renderComment}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item) => (item.id || item._id || Math.random().toString())}
                 contentContainerStyle={styles.commentsList}
               />
 
               <View style={styles.inputContainer}>
-                <Image 
-                  source={{ uri: 'https://picsum.photos/200' }} 
-                  style={styles.inputUserImage} 
-                />
+                {currentUserImage ? (
+                  <Image 
+                    source={{ uri: buildAbsoluteUrl(currentUserImage) }} 
+                    style={styles.inputUserImage} 
+                  />
+                ) : (
+                  <Image 
+                    source={defaultAvatar} 
+                    style={styles.inputUserImage} 
+                  />
+                )}
                 <TextInput
                   style={styles.input}
                   placeholder="Add a comment..."
@@ -72,16 +129,20 @@ const CommentModal = ({ visible, onClose, comments = [] }) => {
                 <TouchableOpacity 
                   style={[
                     styles.sendButton,
-                    !commentText.trim() && styles.sendButtonDisabled
+                    (!commentText.trim() || sending) && styles.sendButtonDisabled
                   ]}
                   onPress={handleSendComment}
-                  disabled={!commentText.trim()}
+                  disabled={!commentText.trim() || sending}
                 >
-                  <Ionicons 
-                    name="send" 
-                    size={20} 
-                    color={commentText.trim() ? colors.primary : colors.gray[400]} 
-                  />
+                  {sending ? (
+                    <ActivityIndicator size={20} color={colors.primary} />
+                  ) : (
+                    <Ionicons 
+                      name="send" 
+                      size={20} 
+                      color={commentText.trim() ? colors.primary : colors.gray[400]} 
+                    />
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -114,6 +175,17 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h2,
     color: colors.black,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  displayName: {
+    ...typography.body,
+    fontWeight: '700',
+    color: colors.black,
+    marginRight: spacing.xs,
   },
   commentsList: {
     flexGrow: 1,
@@ -150,15 +222,6 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.gray[400],
     marginRight: spacing.lg,
-  },
-  likeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  likeCount: {
-    ...typography.caption,
-    color: colors.gray[400],
-    marginLeft: spacing.xs,
   },
   inputContainer: {
     flexDirection: 'row',
